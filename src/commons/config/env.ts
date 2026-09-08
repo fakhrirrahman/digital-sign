@@ -1,3 +1,6 @@
+import { log } from "node:console"
+import { logger } from "../utils/logger"
+
 const required = (key: string): string => {
   const value = Bun.env[key]
 
@@ -22,5 +25,9 @@ export const env = {
   auth: {
     baseUrl: required('AUTH_BASE_URL'),
     jwtSecret: required('JWT_SECRET')
+  },
+
+  logger: {
+    logLevel: Bun.env.LOG_LEVEL ?? 'info'
   }
 } as const
