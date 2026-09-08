@@ -1,7 +1,8 @@
-import { Elysia } from "elysia";
+import { app } from './app'
+import { env } from './commons/config/env'
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+app.listen(env.app.port)
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+  `🦊 ${env.app.name} is running at ${app.server?.hostname}:${app.server?.port}`
+)
