@@ -1,11 +1,11 @@
-export class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string,
-    public code: string
-  ) {
-    super(message)
+import { AppError } from "./app.error";
 
-    this.name = this.constructor.name
+export class UnauthorizedError extends AppError {
+  constructor(message = "Unauthorized") {
+    super(
+      401,
+      message,
+      "UNAUTHORIZED"
+    );
   }
 }

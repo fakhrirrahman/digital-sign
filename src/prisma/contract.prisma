@@ -1,5 +1,3 @@
-// use prisma-next
-
 types {
   Uuid = Uuid
 }
@@ -8,6 +6,8 @@ enum SignRequestStatus {
   @@type("pg/text@1")
 
   PENDING
+  IN_PROGRESS
+  READY_TO_SIGN
   PROCESSING
   SIGNED
   REJECTED
@@ -15,193 +15,421 @@ enum SignRequestStatus {
   CANCELLED
 }
 
+
+enum ApprovalStatus {
+  @@type("pg/text@1")
+
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+enum ApprovalLevel {
+  @@type("pg/text@1")
+  BANJAR
+  DESA
+}
+
+
 enum DocumentType {
   @@type("pg/text@1")
-
-  ORIGINAL
+  FINAL
   SIGNED
-  ATTACHMENT
 }
 
-enum PlacementType {
-  @@type("pg/text@1")
-
-  SIGNATURE
-  INITIAL
-  STAMP
-  QR_CODE
-}
 
 enum AuditAction {
   @@type("pg/text@1")
 
   SIGN_REQUEST_CREATED
-  DOCUMENT_CREATED
-  DOCUMENT_OPENED
-  PLACEMENT_CREATED
-  PLACEMENT_UPDATED
-  SIGN_ATTEMPT
-  PIN_FAILED
-  SIGNED
-  REJECTED
-  FAILED
-  CANCELLED
+
+  APPROVAL_STARTED
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+
+  PIN_VERIFICATION_SUCCESS
+  PIN_VERIFICATION_FAILED
+
+  SIGNATURE_PROFILE_CREATED
+  SIGNATURE_PROFILE_UPDATED
+
+  DOCUMENT_RECEIVED
+  DOCUMENT_HASHED
+
+  SIGNING_STARTED
+  SIGNING_COMPLETED
+  SIGNING_FAILED
+
+  SIGN_REQUEST_COMPLETED
+  SIGN_REQUEST_CANCELLED
+}
+
+
+// ============================================================
+// SIGNING TEMPLATE
+// ============================================================
+//
+// Template TIDAK menyimpan desain PDF.
+//
+// Desain PDF tetap berada di Aplikasi Desa.
+//
+// Template ini menyimpan:
+//
+// - jenis surat
+// - workflow approval
+// - role
+// - permission
+// - urutan approval
+// - posisi visual tanda tangan
+//
+// Contoh:
+//
+// SURAT_KELAHIRAN
+//
+// Step 1:
+// BANJAR
+// KELIHAN
+//
+// Step 2:
+// DESA
+// KADES
+//
+// ============================================================
+
+model SigningTemplate {
+  id Uuid @id @default(uuid())
+
+  // Contoh:
+  // SURAT_KELAHIRAN
+  // SURAT_KEMATIAN
+  // SURAT_DOMISILI
+  code String
+
+  name String
+
+  description String?
+
+  // Berguna kalau suatu saat konfigurasi template berubah.
+  version Int @default(1)
+
+  active Boolean @default(true)
+
+  // User dari existing authentication service.
+  createdBy String @map("created_by")
+
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
+
+  // RELATIONS
+
+  steps SigningTemplateStep[]
+
+  signRequests SignRequest[]
+
+  @@unique([
+    code,
+    version
+  ])
+
+  @@index([code])
+
+  @@index([active])
+
+  @@index([createdBy])
+
+  @@map("signing_templates")
+}
+
+
+// ============================================================
+// SIGNING TEMPLATE STEP
+// ============================================================
+//
+// Menentukan siapa yang melakukan approval/sign.
+//
+// Contoh:
+//
+// SURAT_KELAHIRAN
+//
+// sequence = 1
+// level = BANJAR
+// role = KELIHAN
+// permission = kelahiran.approve.banjar
+//
+// sequence = 2
+// level = DESA
+// role = KADES
+// permission = kelahiran.approve.desa
+//
+// page/x/y/width/height digunakan untuk posisi
+// visual TTD pada PDF.
+//
+// Koordinat disarankan normalized 0.0 - 1.0.
+//
+// ============================================================
+
+model SigningTemplateStep {
+  id Uuid @id @default(uuid())
+
+  templateId Uuid
+    @map("template_id")
+
+  level ApprovalLevel
+
+  // Role dari aplikasi utama.
+  //
+  // contoh:
+  // KELIHAN
+  // KADES
+  role String
+
+  // Permission existing aplikasi Desa.
+  //
+  // contoh:
+  // kelahiran.approve.banjar
+  // kelahiran.approve.desa
+  permission String
+
+  sequence Int
+
+  required Boolean
+    @default(true)
+
+  // ========================================================
+  // SIGNATURE VISUAL PLACEMENT
+  // ========================================================
+
+  // PDF page dimulai dari 1.
+  page Int
+    @default(1)
+
+  // normalized coordinate 0.0 - 1.0
+  x Float
+
+  y Float
+
+  width Float
+
+  height Float
+
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
+
+  // RELATIONS
+
+  template SigningTemplate @relation(
+    fields: [templateId],
+    references: [id]
+  )
+
+  @@unique([
+    templateId,
+    sequence
+  ])
+
+  @@index([templateId])
+
+  @@index([level])
+
+  @@index([role])
+
+  @@map("signing_template_steps")
 }
 
 
 // ============================================================
 // SIGN REQUEST
 // ============================================================
+//
+// Satu permohonan di Aplikasi Desa
+// mempunyai satu SignRequest.
+//
+// Contoh:
+//
+// referenceId:
+// KELAHIRAN-2026-000001
+//
+// Data penduduk TIDAK perlu disimpan di sini.
+//
+// Data seperti:
+//
+// nama anak
+// NIK
+// nama ayah
+// nama ibu
+// alamat
+//
+// tetap menjadi tanggung jawab Aplikasi Desa.
+//
+// ============================================================
 
 model SignRequest {
   id Uuid @id @default(uuid())
 
-  // ID dari aplikasi/service utama.
-  // Contoh:
-  // SURAT-2026-000001
-  referenceId String @unique @map("reference_id")
+  templateId Uuid
+    @map("template_id")
 
-  // User ID berasal dari existing authentication service.
-  // Digital Sign Service tidak perlu punya tabel User sendiri.
-  signerUserId String @map("signer_user_id")
+  // ID transaksi / permohonan dari Aplikasi Desa.
+  referenceId String
+    @unique
+    @map("reference_id")
 
-  // Opsional jika aplikasi utama memakai konsep desa/tenant.
-  villageId String? @map("village_id")
+  // Context / tenant.
+  villageId String?
+    @map("village_id")
 
-  status SignRequestStatus @default(PENDING)
+  banjarId String?
+    @map("banjar_id")
 
-  rejectionReason String? @map("rejection_reason")
+  status SignRequestStatus
+    @default(PENDING)
 
-  createdAt DateTime @default(now()) @map("created_at")
+  // Step yang sedang aktif.
+  //
+  // contoh:
+  // 1 = Kelihan
+  // 2 = Kades
+  currentSequence Int
+    @default(1)
+    @map("current_sequence")
 
-  updatedAt temporal.updatedAt() @map("updated_at")
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
 
-  signedAt DateTime? @map("signed_at")
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
 
-  rejectedAt DateTime? @map("rejected_at")
+  completedAt DateTime?
+    @map("completed_at")
+
+  cancelledAt DateTime?
+    @map("cancelled_at")
 
   // RELATIONS
 
-  documents Document[]
+  template SigningTemplate @relation(
+    fields: [templateId],
+    references: [id]
+  )
 
-  placements SignaturePlacement[]
+  approvals SignRequestApproval[]
+
+  documents Document[]
 
   signatures Signature[]
 
   auditLogs AuditLog[]
 
-  @@index([signerUserId])
+  @@index([templateId])
+
   @@index([status])
+
   @@index([villageId])
+
+  @@index([banjarId])
+
+  @@index([currentSequence])
+
   @@index([createdAt])
 
   @@map("sign_requests")
 }
 
 
-// ============================================================
-// DOCUMENT
-// ============================================================
 
-model Document {
+model SignRequestApproval {
   id Uuid @id @default(uuid())
 
-  signRequestId Uuid @map("sign_request_id")
+  signRequestId Uuid
+    @map("sign_request_id")
 
-  type DocumentType
+  // Snapshot dari template.
+  level ApprovalLevel
 
-  // Lokasi file di R2 / S3.
+  role String
+
+  permission String
+
+  sequence Int
+
+  required Boolean
+    @default(true)
+
+  status ApprovalStatus
+    @default(PENDING)
+
+  // ========================================================
+  // APPROVER
+  // ========================================================
+
+  // User yang benar-benar melakukan approval.
   //
-  // contoh:
+  // HARUS dari JWT.
+  // Jangan menerima userId dari request body.
+  signerUserId String?
+    @map("signer_user_id")
+
+  // ========================================================
+  // LETTER DATA
+  // ========================================================
+
+  // Contoh Banjar:
+  // 145/BNJ/IX/2026
   //
-  // original/2026/09/abc.pdf
+  // Contoh Desa:
+  // 470/123/DESA/2026
+  letterNumber String?
+    @map("letter_number")
+
+  letterDate DateTime?
+    @map("letter_date")
+
+  // ========================================================
+  // SIGNATURE POSITION SNAPSHOT
+  // ========================================================
   //
-  // signed/2026/09/abc.pdf
+  // Posisi TTD disalin dari SigningTemplateStep.
   //
-  fileKey String @map("file_key")
+  // Jadi kalau template nanti diedit,
+  // request lama tidak berubah.
+  //
 
-  // SHA-256 file.
-  hash String?
-
-  mimeType String? @map("mime_type")
-
-  fileSize Int? @map("file_size")
-
-  // Untuk memastikan dokumen final tidak boleh dimodifikasi.
-  locked Boolean @default(false)
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  updatedAt temporal.updatedAt() @map("updated_at")
-
-  // RELATION
-
-  signRequest SignRequest @relation(
-    fields: [signRequestId],
-    references: [id]
-  )
-
-  placements SignaturePlacement[]
-
-  signatures Signature[]
-
-  @@index([signRequestId])
-  @@index([type])
-  @@index([createdAt])
-
-  @@map("documents")
-}
-
-
-// ============================================================
-// SIGNATURE PLACEMENT
-// ============================================================
-//
-// Digunakan frontend React untuk mengatur posisi.
-//
-// Koordinat saya sarankan normalized:
-// x      = 0.0 - 1.0
-// y      = 0.0 - 1.0
-// width  = 0.0 - 1.0
-// height = 0.0 - 1.0
-//
-// Contoh:
-//
-// {
-//   page: 1,
-//   x: 0.68,
-//   y: 0.80,
-//   width: 0.20,
-//   height: 0.08
-// }
-//
-
-model SignaturePlacement {
-  id Uuid @id @default(uuid())
-
-  signRequestId Uuid @map("sign_request_id")
-
-  documentId Uuid @map("document_id")
-
-  signerUserId String @map("signer_user_id")
-
-  type PlacementType @default(SIGNATURE)
-
-  // Page dimulai dari 1.
   page Int
+    @default(1)
 
   x Float
+
   y Float
 
   width Float
+
   height Float
 
-  // Untuk menentukan urutan bila ada beberapa placement.
-  sequence Int @default(1)
+  approvedAt DateTime?
+    @map("approved_at")
 
-  createdAt DateTime @default(now()) @map("created_at")
+  rejectedAt DateTime?
+    @map("rejected_at")
 
-  updatedAt temporal.updatedAt() @map("updated_at")
+  rejectionReason String?
+    @map("rejection_reason")
+
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
 
   // RELATIONS
 
@@ -210,123 +438,57 @@ model SignaturePlacement {
     references: [id]
   )
 
-  document Document @relation(
-    fields: [documentId],
-    references: [id]
-  )
+  signatures Signature[]
 
-  @@index([signRequestId])
-  @@index([documentId])
-  @@index([signerUserId])
-
-  // Mencegah sequence yang sama untuk signer yang sama
-  // pada dokumen yang sama.
   @@unique([
-    documentId,
-    signerUserId,
+    signRequestId,
     sequence
   ])
 
-  @@map("signature_placements")
-}
-
-
-// ============================================================
-// SIGNATURE
-// ============================================================
-//
-// Ini berbeda dengan SignaturePlacement.
-//
-// SignaturePlacement:
-// posisi visual.
-//
-// Signature:
-// hasil cryptographic signing.
-//
-
-model Signature {
-  id Uuid @id @default(uuid())
-
-  signRequestId Uuid @map("sign_request_id")
-
-  documentId Uuid @map("document_id")
-
-  signerUserId String @map("signer_user_id")
-
-  // Hash PDF yang benar-benar ditandatangani.
-  documentHash String @map("document_hash")
-
-  // Contoh:
-  // RSA-SHA256
-  // ECDSA-SHA256
-  algorithm String
-
-  // Cryptographic signature.
-  signatureValue String @map("signature_value")
-
-  // Untuk tahap berikutnya kalau memakai
-  // certificate/PSrE.
-  certificateSerial String? @map("certificate_serial")
-
-  certificateIssuer String? @map("certificate_issuer")
-
-  signedAt DateTime @default(now()) @map("signed_at")
-
-  // RELATIONS
-
-  signRequest SignRequest @relation(
-    fields: [signRequestId],
-    references: [id]
-  )
-
-  document Document @relation(
-    fields: [documentId],
-    references: [id]
-  )
-
   @@index([signRequestId])
-  @@index([documentId])
-  @@index([signerUserId])
-  @@index([signedAt])
 
-  @@map("signatures")
+  @@index([level])
+
+  @@index([role])
+
+  @@index([status])
+
+  @@index([signerUserId])
+
+  @@map("sign_request_approvals")
 }
 
-
-// ============================================================
-// SIGNER CREDENTIAL
-// ============================================================
-//
-// Authentication tetap di service kamu yang sudah ada.
-//
-// Tabel ini khusus credential untuk proses digital-sign.
-//
-// Jangan simpan PIN plaintext.
-//
-// Simpan:
-// Bun.password.hash(pin, {
-//   algorithm: "argon2id"
-// })
-//
 
 model SignerCredential {
   id Uuid @id @default(uuid())
 
-  // ID dari authentication service.
-  userId String @unique @map("user_id")
+  // External user ID dari authentication service.
+  userId String
+    @unique
+    @map("user_id")
 
-  pinHash String @map("pin_hash")
+  pinHash String
+    @map("pin_hash")
 
-  failedAttempt Int @default(0) @map("failed_attempt")
+  failedAttempt Int
+    @default(0)
+    @map("failed_attempt")
 
-  lockedUntil DateTime? @map("locked_until")
+  lockedUntil DateTime?
+    @map("locked_until")
 
-  // Bisa dipakai jika suatu saat PIN perlu di-disable.
-  active Boolean @default(true)
+  active Boolean
+    @default(true)
 
-  createdAt DateTime @default(now()) @map("created_at")
+  lastPinChangedAt DateTime?
+    @map("last_pin_changed_at")
 
-  updatedAt temporal.updatedAt() @map("updated_at")
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
 
   @@index([active])
 
@@ -335,37 +497,225 @@ model SignerCredential {
 
 
 // ============================================================
-// AUDIT LOG
+// SIGNATURE PROFILE
 // ============================================================
 //
-// Audit dibuat append-only dari sisi application.
+// Menyimpan VISUAL tanda tangan.
 //
-// Jangan expose endpoint edit/delete audit.
+// User cukup setup sekali.
 //
+// Contoh:
+// Kelihan menggambar TTD menggunakan React Signature Pad.
+//
+// File PNG transparan disimpan di:
+//
+// Cloudflare R2
+// S3
+// Private Object Storage
+//
+// Database hanya menyimpan object key.
+//
+// ============================================================
+
+model SignatureProfile {
+  id Uuid @id @default(uuid())
+
+  // External user ID.
+  userId String
+    @unique
+    @map("user_id")
+
+  // contoh:
+  //
+  // signatures/users/USER-001/signature.png
+  signatureImageKey String
+    @map("signature_image_key")
+
+  active Boolean
+    @default(true)
+
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
+
+  @@index([active])
+
+  @@map("signature_profiles")
+}
+
+
+model Document {
+  id Uuid @id @default(uuid())
+
+  signRequestId Uuid
+    @map("sign_request_id")
+
+  type DocumentType
+
+  // Private object-storage key.
+  //
+  // contoh:
+  //
+  // final/2026/09/document.pdf
+  //
+  // signed/2026/09/document.pdf
+  fileKey String
+    @map("file_key")
+
+  // SHA-256.
+  hash String?
+
+  mimeType String?
+    @map("mime_type")
+
+  fileSize Int?
+    @map("file_size")
+
+  locked Boolean
+    @default(false)
+
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  updatedAt temporal.updatedAt()
+    @map("updated_at")
+
+  // RELATIONS
+
+  signRequest SignRequest @relation(
+    fields: [signRequestId],
+    references: [id]
+  )
+
+  signatures Signature[]
+
+  @@index([signRequestId])
+
+  @@index([type])
+
+  @@index([hash])
+
+  @@index([createdAt])
+
+  @@map("documents")
+}
+
+model Signature {
+  id Uuid @id @default(uuid())
+
+  signRequestId Uuid
+    @map("sign_request_id")
+
+  approvalId Uuid?
+    @map("approval_id")
+
+  documentId Uuid
+    @map("document_id")
+
+  signerUserId String
+    @map("signer_user_id")
+
+  level ApprovalLevel
+
+  // Hash PDF yang benar-benar ditandatangani.
+  documentHash String
+    @map("document_hash")
+
+  // contoh:
+  //
+  // RSA-SHA256
+  // ECDSA-SHA256
+  algorithm String
+
+  // Hasil cryptographic signature.
+  signatureValue String
+    @map("signature_value")
+
+  // Nantinya bisa dipakai jika integrasi
+  // dengan certificate / PSrE.
+  certificateSerial String?
+    @map("certificate_serial")
+
+  certificateIssuer String?
+    @map("certificate_issuer")
+
+  signedAt DateTime
+    @default(now())
+    @map("signed_at")
+
+  // RELATIONS
+
+  signRequest SignRequest @relation(
+    fields: [signRequestId],
+    references: [id]
+  )
+
+  approval SignRequestApproval? @relation(
+    fields: [approvalId],
+    references: [id]
+  )
+
+  document Document @relation(
+    fields: [documentId],
+    references: [id]
+  )
+
+  @@index([signRequestId])
+
+  @@index([approvalId])
+
+  @@index([documentId])
+
+  @@index([signerUserId])
+
+  @@index([level])
+
+  @@index([documentHash])
+
+  @@index([signedAt])
+
+  @@map("signatures")
+}
 
 model AuditLog {
   id Uuid @id @default(uuid())
 
-  signRequestId Uuid? @map("sign_request_id")
+  signRequestId Uuid?
+    @map("sign_request_id")
 
-  actorUserId String? @map("actor_user_id")
+  actorUserId String?
+    @map("actor_user_id")
 
   action AuditAction
 
-  ipAddress String? @map("ip_address")
+  ipAddress String?
+    @map("ip_address")
 
-  userAgent String? @map("user_agent")
+  userAgent String?
+    @map("user_agent")
 
-  // Bisa menyimpan:
-// {
-//   documentId: "...",
-//   documentHash: "...",
-//   page: 1,
-//   reason: "..."
-// }
+  // Metadata fleksibel.
+  //
+  // contoh:
+  //
+  // {
+  //   "level": "BANJAR",
+  //   "sequence": 1,
+  //   "letterNumber": "145/BNJ/IX/2026"
+  // }
+  //
+  // Jangan masukkan PIN/token/private key ke metadata.
   metadata Json?
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime
+    @default(now())
+    @map("created_at")
+
+  // RELATION
 
   signRequest SignRequest? @relation(
     fields: [signRequestId],
@@ -373,8 +723,11 @@ model AuditLog {
   )
 
   @@index([signRequestId])
+
   @@index([actorUserId])
+
   @@index([action])
+
   @@index([createdAt])
 
   @@map("audit_logs")

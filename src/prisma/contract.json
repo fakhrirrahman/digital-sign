@@ -12,12 +12,16 @@
       "model": "Document",
       "namespace": "public"
     },
+    "sign_request_approvals": {
+      "model": "SignRequestApproval",
+      "namespace": "public"
+    },
     "sign_requests": {
       "model": "SignRequest",
       "namespace": "public"
     },
-    "signature_placements": {
-      "model": "SignaturePlacement",
+    "signature_profiles": {
+      "model": "SignatureProfile",
       "namespace": "public"
     },
     "signatures": {
@@ -27,12 +31,54 @@
     "signer_credentials": {
       "model": "SignerCredential",
       "namespace": "public"
+    },
+    "signing_template_steps": {
+      "model": "SigningTemplateStep",
+      "namespace": "public"
+    },
+    "signing_templates": {
+      "model": "SigningTemplate",
+      "namespace": "public"
     }
   },
   "domain": {
     "namespaces": {
       "public": {
         "enum": {
+          "ApprovalLevel": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "BANJAR",
+                "value": "BANJAR"
+              },
+              {
+                "name": "DESA",
+                "value": "DESA"
+              }
+            ]
+          },
+          "ApprovalStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "PENDING",
+                "value": "PENDING"
+              },
+              {
+                "name": "APPROVED",
+                "value": "APPROVED"
+              },
+              {
+                "name": "REJECTED",
+                "value": "REJECTED"
+              },
+              {
+                "name": "SKIPPED",
+                "value": "SKIPPED"
+              }
+            ]
+          },
           "AuditAction": {
             "codecId": "pg/text@1",
             "members": [
@@ -41,44 +87,60 @@
                 "value": "SIGN_REQUEST_CREATED"
               },
               {
-                "name": "DOCUMENT_CREATED",
-                "value": "DOCUMENT_CREATED"
+                "name": "APPROVAL_STARTED",
+                "value": "APPROVAL_STARTED"
               },
               {
-                "name": "DOCUMENT_OPENED",
-                "value": "DOCUMENT_OPENED"
+                "name": "APPROVAL_APPROVED",
+                "value": "APPROVAL_APPROVED"
               },
               {
-                "name": "PLACEMENT_CREATED",
-                "value": "PLACEMENT_CREATED"
+                "name": "APPROVAL_REJECTED",
+                "value": "APPROVAL_REJECTED"
               },
               {
-                "name": "PLACEMENT_UPDATED",
-                "value": "PLACEMENT_UPDATED"
+                "name": "PIN_VERIFICATION_SUCCESS",
+                "value": "PIN_VERIFICATION_SUCCESS"
               },
               {
-                "name": "SIGN_ATTEMPT",
-                "value": "SIGN_ATTEMPT"
+                "name": "PIN_VERIFICATION_FAILED",
+                "value": "PIN_VERIFICATION_FAILED"
               },
               {
-                "name": "PIN_FAILED",
-                "value": "PIN_FAILED"
+                "name": "SIGNATURE_PROFILE_CREATED",
+                "value": "SIGNATURE_PROFILE_CREATED"
               },
               {
-                "name": "SIGNED",
-                "value": "SIGNED"
+                "name": "SIGNATURE_PROFILE_UPDATED",
+                "value": "SIGNATURE_PROFILE_UPDATED"
               },
               {
-                "name": "REJECTED",
-                "value": "REJECTED"
+                "name": "DOCUMENT_RECEIVED",
+                "value": "DOCUMENT_RECEIVED"
               },
               {
-                "name": "FAILED",
-                "value": "FAILED"
+                "name": "DOCUMENT_HASHED",
+                "value": "DOCUMENT_HASHED"
               },
               {
-                "name": "CANCELLED",
-                "value": "CANCELLED"
+                "name": "SIGNING_STARTED",
+                "value": "SIGNING_STARTED"
+              },
+              {
+                "name": "SIGNING_COMPLETED",
+                "value": "SIGNING_COMPLETED"
+              },
+              {
+                "name": "SIGNING_FAILED",
+                "value": "SIGNING_FAILED"
+              },
+              {
+                "name": "SIGN_REQUEST_COMPLETED",
+                "value": "SIGN_REQUEST_COMPLETED"
+              },
+              {
+                "name": "SIGN_REQUEST_CANCELLED",
+                "value": "SIGN_REQUEST_CANCELLED"
               }
             ]
           },
@@ -86,37 +148,12 @@
             "codecId": "pg/text@1",
             "members": [
               {
-                "name": "ORIGINAL",
-                "value": "ORIGINAL"
+                "name": "FINAL",
+                "value": "FINAL"
               },
               {
                 "name": "SIGNED",
                 "value": "SIGNED"
-              },
-              {
-                "name": "ATTACHMENT",
-                "value": "ATTACHMENT"
-              }
-            ]
-          },
-          "PlacementType": {
-            "codecId": "pg/text@1",
-            "members": [
-              {
-                "name": "SIGNATURE",
-                "value": "SIGNATURE"
-              },
-              {
-                "name": "INITIAL",
-                "value": "INITIAL"
-              },
-              {
-                "name": "STAMP",
-                "value": "STAMP"
-              },
-              {
-                "name": "QR_CODE",
-                "value": "QR_CODE"
               }
             ]
           },
@@ -126,6 +163,14 @@
               {
                 "name": "PENDING",
                 "value": "PENDING"
+              },
+              {
+                "name": "IN_PROGRESS",
+                "value": "IN_PROGRESS"
+              },
+              {
+                "name": "READY_TO_SIGN",
+                "value": "READY_TO_SIGN"
               },
               {
                 "name": "PROCESSING",
@@ -344,21 +389,6 @@
               }
             },
             "relations": {
-              "placements": {
-                "cardinality": "1:N",
-                "on": {
-                  "localFields": [
-                    "id"
-                  ],
-                  "targetFields": [
-                    "documentId"
-                  ]
-                },
-                "to": {
-                  "model": "SignaturePlacement",
-                  "namespace": "public"
-                }
-              },
               "signRequest": {
                 "cardinality": "N:1",
                 "on": {
@@ -429,10 +459,38 @@
           },
           "SignRequest": {
             "fields": {
+              "banjarId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "cancelledAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "completedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "currentSequence": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               },
@@ -444,34 +502,6 @@
                 }
               },
               "referenceId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "rejectedAt": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "kind": "scalar"
-                }
-              },
-              "rejectionReason": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                }
-              },
-              "signedAt": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "kind": "scalar"
-                }
-              },
-              "signerUserId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
@@ -491,6 +521,13 @@
                   "plane": "domain"
                 }
               },
+              "templateId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
               "updatedAt": {
                 "nullable": false,
                 "type": {
@@ -507,6 +544,21 @@
               }
             },
             "relations": {
+              "approvals": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "signRequestId"
+                  ]
+                },
+                "to": {
+                  "model": "SignRequestApproval",
+                  "namespace": "public"
+                }
+              },
               "auditLogs": {
                 "cardinality": "1:N",
                 "on": {
@@ -537,21 +589,6 @@
                   "namespace": "public"
                 }
               },
-              "placements": {
-                "cardinality": "1:N",
-                "on": {
-                  "localFields": [
-                    "id"
-                  ],
-                  "targetFields": [
-                    "signRequestId"
-                  ]
-                },
-                "to": {
-                  "model": "SignaturePlacement",
-                  "namespace": "public"
-                }
-              },
               "signatures": {
                 "cardinality": "1:N",
                 "on": {
@@ -566,12 +603,39 @@
                   "model": "Signature",
                   "namespace": "public"
                 }
+              },
+              "template": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "templateId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "SigningTemplate",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
               "fields": {
+                "banjarId": {
+                  "column": "banjar_id"
+                },
+                "cancelledAt": {
+                  "column": "cancelled_at"
+                },
+                "completedAt": {
+                  "column": "completed_at"
+                },
                 "createdAt": {
                   "column": "created_at"
+                },
+                "currentSequence": {
+                  "column": "current_sequence"
                 },
                 "id": {
                   "column": "id"
@@ -579,20 +643,11 @@
                 "referenceId": {
                   "column": "reference_id"
                 },
-                "rejectedAt": {
-                  "column": "rejected_at"
-                },
-                "rejectionReason": {
-                  "column": "rejection_reason"
-                },
-                "signedAt": {
-                  "column": "signed_at"
-                },
-                "signerUserId": {
-                  "column": "signer_user_id"
-                },
                 "status": {
                   "column": "status"
+                },
+                "templateId": {
+                  "column": "template_id"
                 },
                 "updatedAt": {
                   "column": "updated_at"
@@ -605,12 +660,283 @@
               "table": "sign_requests"
             }
           },
+          "SignRequestApproval": {
+            "fields": {
+              "approvedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "height": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "letterDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "letterNumber": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "level": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ApprovalLevel",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "page": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "permission": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "rejectedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "rejectionReason": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "required": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "sequence": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "signRequestId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "signerUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ApprovalStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "width": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "x": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "y": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "signRequest": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "signRequestId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "SignRequest",
+                  "namespace": "public"
+                }
+              },
+              "signatures": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "approvalId"
+                  ]
+                },
+                "to": {
+                  "model": "Signature",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "approvedAt": {
+                  "column": "approved_at"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "height": {
+                  "column": "height"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "letterDate": {
+                  "column": "letter_date"
+                },
+                "letterNumber": {
+                  "column": "letter_number"
+                },
+                "level": {
+                  "column": "level"
+                },
+                "page": {
+                  "column": "page"
+                },
+                "permission": {
+                  "column": "permission"
+                },
+                "rejectedAt": {
+                  "column": "rejected_at"
+                },
+                "rejectionReason": {
+                  "column": "rejection_reason"
+                },
+                "required": {
+                  "column": "required"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "sequence": {
+                  "column": "sequence"
+                },
+                "signRequestId": {
+                  "column": "sign_request_id"
+                },
+                "signerUserId": {
+                  "column": "signer_user_id"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                },
+                "width": {
+                  "column": "width"
+                },
+                "x": {
+                  "column": "x"
+                },
+                "y": {
+                  "column": "y"
+                }
+              },
+              "namespaceId": "public",
+              "table": "sign_request_approvals"
+            }
+          },
           "Signature": {
             "fields": {
               "algorithm": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "approvalId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
                   "kind": "scalar"
                 }
               },
@@ -649,6 +975,19 @@
                   "kind": "scalar"
                 }
               },
+              "level": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ApprovalLevel",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "signRequestId": {
                 "nullable": false,
                 "type": {
@@ -679,6 +1018,21 @@
               }
             },
             "relations": {
+              "approval": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "approvalId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "SignRequestApproval",
+                  "namespace": "public"
+                }
+              },
               "document": {
                 "cardinality": "N:1",
                 "on": {
@@ -715,6 +1069,9 @@
                 "algorithm": {
                   "column": "algorithm"
                 },
+                "approvalId": {
+                  "column": "approval_id"
+                },
                 "certificateIssuer": {
                   "column": "certificate_issuer"
                 },
@@ -729,6 +1086,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "level": {
+                  "column": "level"
                 },
                 "signRequestId": {
                   "column": "sign_request_id"
@@ -747,26 +1107,19 @@
               "table": "signatures"
             }
           },
-          "SignaturePlacement": {
+          "SignatureProfile": {
             "fields": {
+              "active": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-temporal@1",
-                  "kind": "scalar"
-                }
-              },
-              "documentId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/uuid@1",
-                  "kind": "scalar"
-                }
-              },
-              "height": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/float8@1",
                   "kind": "scalar"
                 }
               },
@@ -777,45 +1130,11 @@
                   "kind": "scalar"
                 }
               },
-              "page": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "sequence": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/int4@1",
-                  "kind": "scalar"
-                }
-              },
-              "signRequestId": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/uuid@1",
-                  "kind": "scalar"
-                }
-              },
-              "signerUserId": {
+              "signatureImageKey": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
-                }
-              },
-              "type": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/text@1",
-                  "kind": "scalar"
-                },
-                "valueSet": {
-                  "entityKind": "enum",
-                  "entityName": "PlacementType",
-                  "namespaceId": "public",
-                  "plane": "domain"
                 }
               },
               "updatedAt": {
@@ -825,104 +1144,38 @@
                   "kind": "scalar"
                 }
               },
-              "width": {
+              "userId": {
                 "nullable": false,
                 "type": {
-                  "codecId": "pg/float8@1",
-                  "kind": "scalar"
-                }
-              },
-              "x": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/float8@1",
-                  "kind": "scalar"
-                }
-              },
-              "y": {
-                "nullable": false,
-                "type": {
-                  "codecId": "pg/float8@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               }
             },
-            "relations": {
-              "document": {
-                "cardinality": "N:1",
-                "on": {
-                  "localFields": [
-                    "documentId"
-                  ],
-                  "targetFields": [
-                    "id"
-                  ]
-                },
-                "to": {
-                  "model": "Document",
-                  "namespace": "public"
-                }
-              },
-              "signRequest": {
-                "cardinality": "N:1",
-                "on": {
-                  "localFields": [
-                    "signRequestId"
-                  ],
-                  "targetFields": [
-                    "id"
-                  ]
-                },
-                "to": {
-                  "model": "SignRequest",
-                  "namespace": "public"
-                }
-              }
-            },
+            "relations": {},
             "storage": {
               "fields": {
+                "active": {
+                  "column": "active"
+                },
                 "createdAt": {
                   "column": "created_at"
-                },
-                "documentId": {
-                  "column": "document_id"
-                },
-                "height": {
-                  "column": "height"
                 },
                 "id": {
                   "column": "id"
                 },
-                "page": {
-                  "column": "page"
-                },
-                "sequence": {
-                  "column": "sequence"
-                },
-                "signRequestId": {
-                  "column": "sign_request_id"
-                },
-                "signerUserId": {
-                  "column": "signer_user_id"
-                },
-                "type": {
-                  "column": "type"
+                "signatureImageKey": {
+                  "column": "signature_image_key"
                 },
                 "updatedAt": {
                   "column": "updated_at"
                 },
-                "width": {
-                  "column": "width"
-                },
-                "x": {
-                  "column": "x"
-                },
-                "y": {
-                  "column": "y"
+                "userId": {
+                  "column": "user_id"
                 }
               },
               "namespaceId": "public",
-              "table": "signature_placements"
+              "table": "signature_profiles"
             }
           },
           "SignerCredential": {
@@ -952,6 +1205,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastPinChangedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
                   "kind": "scalar"
                 }
               },
@@ -999,6 +1259,9 @@
                 "id": {
                   "column": "id"
                 },
+                "lastPinChangedAt": {
+                  "column": "last_pin_changed_at"
+                },
                 "lockedUntil": {
                   "column": "locked_until"
                 },
@@ -1015,6 +1278,311 @@
               "namespaceId": "public",
               "table": "signer_credentials"
             }
+          },
+          "SigningTemplate": {
+            "fields": {
+              "active": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "code": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdBy": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "version": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "signRequests": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "templateId"
+                  ]
+                },
+                "to": {
+                  "model": "SignRequest",
+                  "namespace": "public"
+                }
+              },
+              "steps": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "templateId"
+                  ]
+                },
+                "to": {
+                  "model": "SigningTemplateStep",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "active": {
+                  "column": "active"
+                },
+                "code": {
+                  "column": "code"
+                },
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "createdBy": {
+                  "column": "created_by"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                },
+                "version": {
+                  "column": "version"
+                }
+              },
+              "namespaceId": "public",
+              "table": "signing_templates"
+            }
+          },
+          "SigningTemplateStep": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "height": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "level": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ApprovalLevel",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "page": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "permission": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "required": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "sequence": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "templateId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "width": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "x": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "y": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "template": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "templateId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "SigningTemplate",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "created_at"
+                },
+                "height": {
+                  "column": "height"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "level": {
+                  "column": "level"
+                },
+                "page": {
+                  "column": "page"
+                },
+                "permission": {
+                  "column": "permission"
+                },
+                "required": {
+                  "column": "required"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "sequence": {
+                  "column": "sequence"
+                },
+                "templateId": {
+                  "column": "template_id"
+                },
+                "updatedAt": {
+                  "column": "updated_at"
+                },
+                "width": {
+                  "column": "width"
+                },
+                "x": {
+                  "column": "x"
+                },
+                "y": {
+                  "column": "y"
+                }
+              },
+              "namespaceId": "public",
+              "table": "signing_template_steps"
+            }
           }
         }
       }
@@ -1028,8 +1596,8 @@
             "audit_logs": {
               "checks": [
                 {
-                  "expression": "\"action\" IN ('SIGN_REQUEST_CREATED', 'DOCUMENT_CREATED', 'DOCUMENT_OPENED', 'PLACEMENT_CREATED', 'PLACEMENT_UPDATED', 'SIGN_ATTEMPT', 'PIN_FAILED', 'SIGNED', 'REJECTED', 'FAILED', 'CANCELLED')",
-                  "name": "audit_logs_action_check_d56752b7",
+                  "expression": "\"action\" IN ('SIGN_REQUEST_CREATED', 'APPROVAL_STARTED', 'APPROVAL_APPROVED', 'APPROVAL_REJECTED', 'PIN_VERIFICATION_SUCCESS', 'PIN_VERIFICATION_FAILED', 'SIGNATURE_PROFILE_CREATED', 'SIGNATURE_PROFILE_UPDATED', 'DOCUMENT_RECEIVED', 'DOCUMENT_HASHED', 'SIGNING_STARTED', 'SIGNING_COMPLETED', 'SIGNING_FAILED', 'SIGN_REQUEST_COMPLETED', 'SIGN_REQUEST_CANCELLED')",
+                  "name": "audit_logs_action_check_58c7dcda",
                   "prefix": "audit_logs_action_check"
                 }
               ],
@@ -1149,8 +1717,8 @@
             "documents": {
               "checks": [
                 {
-                  "expression": "\"type\" IN ('ORIGINAL', 'SIGNED', 'ATTACHMENT')",
-                  "name": "documents_type_check_b4fd3c0b",
+                  "expression": "\"type\" IN ('FINAL', 'SIGNED')",
+                  "name": "documents_type_check_d016bc72",
                   "prefix": "documents_type_check"
                 }
               ],
@@ -1251,6 +1819,14 @@
                 },
                 {
                   "columns": [
+                    "hash"
+                  ],
+                  "name": "documents_hash_idx_d25bc543",
+                  "prefix": "documents_hash_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "sign_request_id"
                   ],
                   "name": "documents_sign_request_id_idx_caa2feef",
@@ -1273,15 +1849,25 @@
               },
               "uniques": []
             },
-            "sign_requests": {
+            "sign_request_approvals": {
               "checks": [
                 {
-                  "expression": "\"status\" IN ('PENDING', 'PROCESSING', 'SIGNED', 'REJECTED', 'FAILED', 'CANCELLED')",
-                  "name": "sign_requests_status_check_14769a7d",
-                  "prefix": "sign_requests_status_check"
+                  "expression": "\"level\" IN ('BANJAR', 'DESA')",
+                  "name": "sign_request_approvals_level_check_534088a9",
+                  "prefix": "sign_request_approvals_level_check"
+                },
+                {
+                  "expression": "\"status\" IN ('PENDING', 'APPROVED', 'REJECTED', 'SKIPPED')",
+                  "name": "sign_request_approvals_status_check_6f336f18",
+                  "prefix": "sign_request_approvals_status_check"
                 }
               ],
               "columns": {
+                "approved_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
                 "created_at": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "default": {
@@ -1291,13 +1877,48 @@
                   "nativeType": "timestamptz",
                   "nullable": false
                 },
+                "height": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                },
                 "id": {
                   "codecId": "pg/uuid@1",
                   "nativeType": "uuid",
                   "nullable": false,
                   "typeRef": "Uuid"
                 },
-                "reference_id": {
+                "letter_date": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "letter_number": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "level": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ApprovalLevel",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "page": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "permission": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
@@ -1312,136 +1933,22 @@
                   "nativeType": "text",
                   "nullable": true
                 },
-                "signed_at": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "nativeType": "timestamptz",
-                  "nullable": true
-                },
-                "signer_user_id": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": false
-                },
-                "status": {
-                  "codecId": "pg/text@1",
+                "required": {
+                  "codecId": "pg/bool@1",
                   "default": {
                     "kind": "literal",
-                    "value": "PENDING"
+                    "value": true
                   },
-                  "nativeType": "text",
-                  "nullable": false,
-                  "valueSet": {
-                    "entityKind": "valueSet",
-                    "entityName": "SignRequestStatus",
-                    "namespaceId": "public",
-                    "plane": "storage"
-                  }
-                },
-                "updated_at": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "nativeType": "timestamptz",
+                  "nativeType": "bool",
                   "nullable": false
                 },
-                "village_id": {
+                "role": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
-                  "nullable": true
-                }
-              },
-              "foreignKeys": [],
-              "indexes": [
-                {
-                  "columns": [
-                    "created_at"
-                  ],
-                  "name": "sign_requests_created_at_idx_225d8c0f",
-                  "prefix": "sign_requests_created_at_idx",
-                  "unique": false
-                },
-                {
-                  "columns": [
-                    "signer_user_id"
-                  ],
-                  "name": "sign_requests_signer_user_id_idx_cda3000a",
-                  "prefix": "sign_requests_signer_user_id_idx",
-                  "unique": false
-                },
-                {
-                  "columns": [
-                    "status"
-                  ],
-                  "name": "sign_requests_status_idx_e98638ab",
-                  "prefix": "sign_requests_status_idx",
-                  "unique": false
-                },
-                {
-                  "columns": [
-                    "village_id"
-                  ],
-                  "name": "sign_requests_village_id_idx_baafdf98",
-                  "prefix": "sign_requests_village_id_idx",
-                  "unique": false
-                }
-              ],
-              "primaryKey": {
-                "columns": [
-                  "id"
-                ]
-              },
-              "uniques": [
-                {
-                  "columns": [
-                    "reference_id"
-                  ]
-                }
-              ]
-            },
-            "signature_placements": {
-              "checks": [
-                {
-                  "expression": "\"type\" IN ('SIGNATURE', 'INITIAL', 'STAMP', 'QR_CODE')",
-                  "name": "signature_placements_type_check_577a5452",
-                  "prefix": "signature_placements_type_check"
-                }
-              ],
-              "columns": {
-                "created_at": {
-                  "codecId": "pg/timestamptz-temporal@1",
-                  "default": {
-                    "expression": "now()",
-                    "kind": "function"
-                  },
-                  "nativeType": "timestamptz",
-                  "nullable": false
-                },
-                "document_id": {
-                  "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
-                  "nullable": false,
-                  "typeRef": "Uuid"
-                },
-                "height": {
-                  "codecId": "pg/float8@1",
-                  "nativeType": "float8",
-                  "nullable": false
-                },
-                "id": {
-                  "codecId": "pg/uuid@1",
-                  "nativeType": "uuid",
-                  "nullable": false,
-                  "typeRef": "Uuid"
-                },
-                "page": {
-                  "codecId": "pg/int4@1",
-                  "nativeType": "int4",
                   "nullable": false
                 },
                 "sequence": {
                   "codecId": "pg/int4@1",
-                  "default": {
-                    "kind": "literal",
-                    "value": 1
-                  },
                   "nativeType": "int4",
                   "nullable": false
                 },
@@ -1454,19 +1961,19 @@
                 "signer_user_id": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
-                  "nullable": false
+                  "nullable": true
                 },
-                "type": {
+                "status": {
                   "codecId": "pg/text@1",
                   "default": {
                     "kind": "literal",
-                    "value": "SIGNATURE"
+                    "value": "PENDING"
                   },
                   "nativeType": "text",
                   "nullable": false,
                   "valueSet": {
                     "entityKind": "valueSet",
-                    "entityName": "PlacementType",
+                    "entityName": "ApprovalStatus",
                     "namespaceId": "public",
                     "plane": "storage"
                   }
@@ -1499,7 +2006,7 @@
                       "sign_request_id"
                     ],
                     "namespaceId": "public",
-                    "tableName": "signature_placements"
+                    "tableName": "sign_request_approvals"
                   },
                   "target": {
                     "columns": [
@@ -1508,47 +2015,47 @@
                     "namespaceId": "public",
                     "tableName": "sign_requests"
                   }
-                },
-                {
-                  "source": {
-                    "columns": [
-                      "document_id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "signature_placements"
-                  },
-                  "target": {
-                    "columns": [
-                      "id"
-                    ],
-                    "namespaceId": "public",
-                    "tableName": "documents"
-                  }
                 }
               ],
               "indexes": [
                 {
                   "columns": [
-                    "document_id"
+                    "level"
                   ],
-                  "name": "signature_placements_document_id_idx_d3d0944e",
-                  "prefix": "signature_placements_document_id_idx",
+                  "name": "sign_request_approvals_level_idx_30977cf3",
+                  "prefix": "sign_request_approvals_level_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "role"
+                  ],
+                  "name": "sign_request_approvals_role_idx_2c1ddf83",
+                  "prefix": "sign_request_approvals_role_idx",
                   "unique": false
                 },
                 {
                   "columns": [
                     "sign_request_id"
                   ],
-                  "name": "signature_placements_sign_request_id_idx_caa2feef",
-                  "prefix": "signature_placements_sign_request_id_idx",
+                  "name": "sign_request_approvals_sign_request_id_idx_caa2feef",
+                  "prefix": "sign_request_approvals_sign_request_id_idx",
                   "unique": false
                 },
                 {
                   "columns": [
                     "signer_user_id"
                   ],
-                  "name": "signature_placements_signer_user_id_idx_cda3000a",
-                  "prefix": "signature_placements_signer_user_id_idx",
+                  "name": "sign_request_approvals_signer_user_id_idx_cda3000a",
+                  "prefix": "sign_request_approvals_signer_user_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "sign_request_approvals_status_idx_e98638ab",
+                  "prefix": "sign_request_approvals_status_idx",
                   "unique": false
                 }
               ],
@@ -1560,19 +2067,263 @@
               "uniques": [
                 {
                   "columns": [
-                    "document_id",
-                    "signer_user_id",
+                    "sign_request_id",
                     "sequence"
                   ]
                 }
               ]
             },
+            "sign_requests": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('PENDING', 'IN_PROGRESS', 'READY_TO_SIGN', 'PROCESSING', 'SIGNED', 'REJECTED', 'FAILED', 'CANCELLED')",
+                  "name": "sign_requests_status_check_18dd2aa8",
+                  "prefix": "sign_requests_status_check"
+                }
+              ],
+              "columns": {
+                "banjar_id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "cancelled_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "completed_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "current_sequence": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false,
+                  "typeRef": "Uuid"
+                },
+                "reference_id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "SignRequestStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "template_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false,
+                  "typeRef": "Uuid"
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "village_id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "template_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "sign_requests"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "signing_templates"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "banjar_id"
+                  ],
+                  "name": "sign_requests_banjar_id_idx_a22e78bc",
+                  "prefix": "sign_requests_banjar_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "created_at"
+                  ],
+                  "name": "sign_requests_created_at_idx_225d8c0f",
+                  "prefix": "sign_requests_created_at_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "current_sequence"
+                  ],
+                  "name": "sign_requests_current_sequence_idx_4c3b5cb4",
+                  "prefix": "sign_requests_current_sequence_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "sign_requests_status_idx_e98638ab",
+                  "prefix": "sign_requests_status_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "template_id"
+                  ],
+                  "name": "sign_requests_template_id_idx_dc536619",
+                  "prefix": "sign_requests_template_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "village_id"
+                  ],
+                  "name": "sign_requests_village_id_idx_baafdf98",
+                  "prefix": "sign_requests_village_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "reference_id"
+                  ]
+                }
+              ]
+            },
+            "signature_profiles": {
+              "columns": {
+                "active": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false,
+                  "typeRef": "Uuid"
+                },
+                "signature_image_key": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "user_id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "active"
+                  ],
+                  "name": "signature_profiles_active_idx_8af4daed",
+                  "prefix": "signature_profiles_active_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "user_id"
+                  ]
+                }
+              ]
+            },
             "signatures": {
+              "checks": [
+                {
+                  "expression": "\"level\" IN ('BANJAR', 'DESA')",
+                  "name": "signatures_level_check_534088a9",
+                  "prefix": "signatures_level_check"
+                }
+              ],
               "columns": {
                 "algorithm": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
+                },
+                "approval_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": true,
+                  "typeRef": "Uuid"
                 },
                 "certificate_issuer": {
                   "codecId": "pg/text@1",
@@ -1600,6 +2351,17 @@
                   "nativeType": "uuid",
                   "nullable": false,
                   "typeRef": "Uuid"
+                },
+                "level": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ApprovalLevel",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "sign_request_id": {
                   "codecId": "pg/uuid@1",
@@ -1647,6 +2409,22 @@
                 {
                   "source": {
                     "columns": [
+                      "approval_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "signatures"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "sign_request_approvals"
+                  }
+                },
+                {
+                  "source": {
+                    "columns": [
                       "document_id"
                     ],
                     "namespaceId": "public",
@@ -1664,10 +2442,34 @@
               "indexes": [
                 {
                   "columns": [
+                    "approval_id"
+                  ],
+                  "name": "signatures_approval_id_idx_6a894154",
+                  "prefix": "signatures_approval_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "document_hash"
+                  ],
+                  "name": "signatures_document_hash_idx_4efcc750",
+                  "prefix": "signatures_document_hash_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "document_id"
                   ],
                   "name": "signatures_document_id_idx_d3d0944e",
                   "prefix": "signatures_document_id_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "level"
+                  ],
+                  "name": "signatures_level_idx_30977cf3",
+                  "prefix": "signatures_level_idx",
                   "unique": false
                 },
                 {
@@ -1737,6 +2539,11 @@
                   "nullable": false,
                   "typeRef": "Uuid"
                 },
+                "last_pin_changed_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
                 "locked_until": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "nativeType": "timestamptz",
@@ -1781,46 +2588,318 @@
                   ]
                 }
               ]
+            },
+            "signing_template_steps": {
+              "checks": [
+                {
+                  "expression": "\"level\" IN ('BANJAR', 'DESA')",
+                  "name": "signing_template_steps_level_check_534088a9",
+                  "prefix": "signing_template_steps_level_check"
+                }
+              ],
+              "columns": {
+                "created_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "height": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false,
+                  "typeRef": "Uuid"
+                },
+                "level": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ApprovalLevel",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "page": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "permission": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "required": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "role": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "sequence": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "template_id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false,
+                  "typeRef": "Uuid"
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "width": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                },
+                "x": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                },
+                "y": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "template_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "signing_template_steps"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "signing_templates"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "level"
+                  ],
+                  "name": "signing_template_steps_level_idx_30977cf3",
+                  "prefix": "signing_template_steps_level_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "role"
+                  ],
+                  "name": "signing_template_steps_role_idx_2c1ddf83",
+                  "prefix": "signing_template_steps_role_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "template_id"
+                  ],
+                  "name": "signing_template_steps_template_id_idx_dc536619",
+                  "prefix": "signing_template_steps_template_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "template_id",
+                    "sequence"
+                  ]
+                }
+              ]
+            },
+            "signing_templates": {
+              "columns": {
+                "active": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "code": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "created_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "created_by": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false,
+                  "typeRef": "Uuid"
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "updated_at": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "version": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "active"
+                  ],
+                  "name": "signing_templates_active_idx_8af4daed",
+                  "prefix": "signing_templates_active_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "code"
+                  ],
+                  "name": "signing_templates_code_idx_8e43b86b",
+                  "prefix": "signing_templates_code_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "created_by"
+                  ],
+                  "name": "signing_templates_created_by_idx_e13bb8bf",
+                  "prefix": "signing_templates_created_by_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "code",
+                    "version"
+                  ]
+                }
+              ]
             }
           },
           "valueSet": {
+            "ApprovalLevel": {
+              "kind": "valueSet",
+              "values": [
+                "BANJAR",
+                "DESA"
+              ]
+            },
+            "ApprovalStatus": {
+              "kind": "valueSet",
+              "values": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "SKIPPED"
+              ]
+            },
             "AuditAction": {
               "kind": "valueSet",
               "values": [
                 "SIGN_REQUEST_CREATED",
-                "DOCUMENT_CREATED",
-                "DOCUMENT_OPENED",
-                "PLACEMENT_CREATED",
-                "PLACEMENT_UPDATED",
-                "SIGN_ATTEMPT",
-                "PIN_FAILED",
-                "SIGNED",
-                "REJECTED",
-                "FAILED",
-                "CANCELLED"
+                "APPROVAL_STARTED",
+                "APPROVAL_APPROVED",
+                "APPROVAL_REJECTED",
+                "PIN_VERIFICATION_SUCCESS",
+                "PIN_VERIFICATION_FAILED",
+                "SIGNATURE_PROFILE_CREATED",
+                "SIGNATURE_PROFILE_UPDATED",
+                "DOCUMENT_RECEIVED",
+                "DOCUMENT_HASHED",
+                "SIGNING_STARTED",
+                "SIGNING_COMPLETED",
+                "SIGNING_FAILED",
+                "SIGN_REQUEST_COMPLETED",
+                "SIGN_REQUEST_CANCELLED"
               ]
             },
             "DocumentType": {
               "kind": "valueSet",
               "values": [
-                "ORIGINAL",
-                "SIGNED",
-                "ATTACHMENT"
-              ]
-            },
-            "PlacementType": {
-              "kind": "valueSet",
-              "values": [
-                "SIGNATURE",
-                "INITIAL",
-                "STAMP",
-                "QR_CODE"
+                "FINAL",
+                "SIGNED"
               ]
             },
             "SignRequestStatus": {
               "kind": "valueSet",
               "values": [
                 "PENDING",
+                "IN_PROGRESS",
+                "READY_TO_SIGN",
                 "PROCESSING",
                 "SIGNED",
                 "REJECTED",
@@ -1834,7 +2913,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "af2b89a543a858ed67dd91fb9ad4eaa69076fb53e0cadba5a0717e1cd2e6fdd1",
+    "storageHash": "02087acd39039113d87c3070c74fcc3d9d9e72aa25a9ad3246bffc6a0a8e38bb",
     "types": {
       "Uuid": {
         "codecId": "pg/uuid@1",
@@ -1844,7 +2923,7 @@
     }
   },
   "execution": {
-    "executionHash": "3a78e1c2935418ea4d057326b99e1f40f5040ebfd15664b72a383edd9e8e3ab8",
+    "executionHash": "ad3ca1ccdbc0b8233ab7e6a0e2816c20928e0f0b4f0c7a646d0626066eb6ad7a",
     "mutations": {
       "defaults": [
         {
@@ -1892,6 +2971,32 @@
           "ref": {
             "column": "id",
             "namespace": "public",
+            "table": "sign_request_approvals"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updated_at",
+            "namespace": "public",
+            "table": "sign_request_approvals"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
             "table": "sign_requests"
           }
         },
@@ -1918,7 +3023,7 @@
           "ref": {
             "column": "id",
             "namespace": "public",
-            "table": "signature_placements"
+            "table": "signature_profiles"
           }
         },
         {
@@ -1933,7 +3038,7 @@
           "ref": {
             "column": "updated_at",
             "namespace": "public",
-            "table": "signature_placements"
+            "table": "signature_profiles"
           }
         },
         {
@@ -1971,6 +3076,58 @@
             "column": "updated_at",
             "namespace": "public",
             "table": "signer_credentials"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "signing_template_steps"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updated_at",
+            "namespace": "public",
+            "table": "signing_template_steps"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "signing_templates"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "instantNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updated_at",
+            "namespace": "public",
+            "table": "signing_templates"
           }
         }
       ]

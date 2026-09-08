@@ -1,23 +1,32 @@
-import Elysia, { status } from "elysia";
+import Elysia from "elysia";
+
 import { jwtPlugin } from "../plugins/jwt.plugin";
+import { UnauthorizedError } from "../errors/unauthorized.error";
 
 export const authMiddleware = new Elysia({
   name: "auth-middleware",
 })
   .use(jwtPlugin)
-  .derive(async ({ headers, jwt, status }) => {
+  .derive(async ({ headers, jwt }) => {
     const authorization = headers.authorization;
+
     if (!authorization) {
-      return status(401, {
-        message: "Authorization header is missing",
-      });
+      throw new UnauthorizedError("Authorization header is missing");
     }
-    const token = authorization.substring(7); // Remove "Bearer " prefix
+
+    if (!authorization.startsWith("Bearer ")) {
+      throw new UnauthorizedError("Invalid authorization format");
+    }
+
+    const token = authorization.slice(7);
+
     const payload = await jwt.verify(token);
+
     if (!payload) {
-      return status(401, {
-        message: "Invalid token",
-      });
+      throw new UnauthorizedError("Invalid or expired token");
     }
-    return payload;
+
+    return {
+      auth: payload,
+    };
   });

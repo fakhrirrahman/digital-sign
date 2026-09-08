@@ -33,9 +33,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'af2b89a543a858ed67dd91fb9ad4eaa69076fb53e0cadba5a0717e1cd2e6fdd1'>;
+  StorageHashBase<'02087acd39039113d87c3070c74fcc3d9d9e72aa25a9ad3246bffc6a0a8e38bb'>;
 export type ExecutionHash =
-  ExecutionHashBase<'3a78e1c2935418ea4d057326b99e1f40f5040ebfd15664b72a383edd9e8e3ab8'>;
+  ExecutionHashBase<'ad3ca1ccdbc0b8233ab7e6a0e2816c20928e0f0b4f0c7a646d0626066eb6ad7a'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -247,16 +247,20 @@ export type FieldOutputTypes = {
       readonly actorUserId: CodecTypes['pg/text@1']['output'] | null;
       readonly action:
         | 'SIGN_REQUEST_CREATED'
-        | 'DOCUMENT_CREATED'
-        | 'DOCUMENT_OPENED'
-        | 'PLACEMENT_CREATED'
-        | 'PLACEMENT_UPDATED'
-        | 'SIGN_ATTEMPT'
-        | 'PIN_FAILED'
-        | 'SIGNED'
-        | 'REJECTED'
-        | 'FAILED'
-        | 'CANCELLED';
+        | 'APPROVAL_STARTED'
+        | 'APPROVAL_APPROVED'
+        | 'APPROVAL_REJECTED'
+        | 'PIN_VERIFICATION_SUCCESS'
+        | 'PIN_VERIFICATION_FAILED'
+        | 'SIGNATURE_PROFILE_CREATED'
+        | 'SIGNATURE_PROFILE_UPDATED'
+        | 'DOCUMENT_RECEIVED'
+        | 'DOCUMENT_HASHED'
+        | 'SIGNING_STARTED'
+        | 'SIGNING_COMPLETED'
+        | 'SIGNING_FAILED'
+        | 'SIGN_REQUEST_COMPLETED'
+        | 'SIGN_REQUEST_CANCELLED';
       readonly ipAddress: CodecTypes['pg/text@1']['output'] | null;
       readonly userAgent: CodecTypes['pg/text@1']['output'] | null;
       readonly metadata: CodecTypes['pg/json@1']['output'] | null;
@@ -265,7 +269,7 @@ export type FieldOutputTypes = {
     readonly Document: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly signRequestId: CodecTypes['pg/uuid@1']['output'];
-      readonly type: 'ORIGINAL' | 'SIGNED' | 'ATTACHMENT';
+      readonly type: 'FINAL' | 'SIGNED';
       readonly fileKey: CodecTypes['pg/text@1']['output'];
       readonly hash: CodecTypes['pg/text@1']['output'] | null;
       readonly mimeType: CodecTypes['pg/text@1']['output'] | null;
@@ -277,8 +281,10 @@ export type FieldOutputTypes = {
     readonly Signature: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
       readonly signRequestId: CodecTypes['pg/uuid@1']['output'];
+      readonly approvalId: CodecTypes['pg/uuid@1']['output'] | null;
       readonly documentId: CodecTypes['pg/uuid@1']['output'];
       readonly signerUserId: CodecTypes['pg/text@1']['output'];
+      readonly level: 'BANJAR' | 'DESA';
       readonly documentHash: CodecTypes['pg/text@1']['output'];
       readonly algorithm: CodecTypes['pg/text@1']['output'];
       readonly signatureValue: CodecTypes['pg/text@1']['output'];
@@ -286,18 +292,11 @@ export type FieldOutputTypes = {
       readonly certificateIssuer: CodecTypes['pg/text@1']['output'] | null;
       readonly signedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
-    readonly SignaturePlacement: {
+    readonly SignatureProfile: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
-      readonly signRequestId: CodecTypes['pg/uuid@1']['output'];
-      readonly documentId: CodecTypes['pg/uuid@1']['output'];
-      readonly signerUserId: CodecTypes['pg/text@1']['output'];
-      readonly type: 'SIGNATURE' | 'INITIAL' | 'STAMP' | 'QR_CODE';
-      readonly page: CodecTypes['pg/int4@1']['output'];
-      readonly x: CodecTypes['pg/float8@1']['output'];
-      readonly y: CodecTypes['pg/float8@1']['output'];
-      readonly width: CodecTypes['pg/float8@1']['output'];
-      readonly height: CodecTypes['pg/float8@1']['output'];
-      readonly sequence: CodecTypes['pg/int4@1']['output'];
+      readonly userId: CodecTypes['pg/text@1']['output'];
+      readonly signatureImageKey: CodecTypes['pg/text@1']['output'];
+      readonly active: CodecTypes['pg/bool@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
@@ -308,20 +307,80 @@ export type FieldOutputTypes = {
       readonly failedAttempt: CodecTypes['pg/int4@1']['output'];
       readonly lockedUntil: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly active: CodecTypes['pg/bool@1']['output'];
+      readonly lastPinChangedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+    };
+    readonly SigningTemplate: {
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly code: CodecTypes['pg/text@1']['output'];
+      readonly name: CodecTypes['pg/text@1']['output'];
+      readonly description: CodecTypes['pg/text@1']['output'] | null;
+      readonly version: CodecTypes['pg/int4@1']['output'];
+      readonly active: CodecTypes['pg/bool@1']['output'];
+      readonly createdBy: CodecTypes['pg/text@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+    };
+    readonly SigningTemplateStep: {
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly templateId: CodecTypes['pg/uuid@1']['output'];
+      readonly level: 'BANJAR' | 'DESA';
+      readonly role: CodecTypes['pg/text@1']['output'];
+      readonly permission: CodecTypes['pg/text@1']['output'];
+      readonly sequence: CodecTypes['pg/int4@1']['output'];
+      readonly required: CodecTypes['pg/bool@1']['output'];
+      readonly page: CodecTypes['pg/int4@1']['output'];
+      readonly x: CodecTypes['pg/float8@1']['output'];
+      readonly y: CodecTypes['pg/float8@1']['output'];
+      readonly width: CodecTypes['pg/float8@1']['output'];
+      readonly height: CodecTypes['pg/float8@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
     readonly SignRequest: {
       readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly templateId: CodecTypes['pg/uuid@1']['output'];
       readonly referenceId: CodecTypes['pg/text@1']['output'];
-      readonly signerUserId: CodecTypes['pg/text@1']['output'];
       readonly villageId: CodecTypes['pg/text@1']['output'] | null;
-      readonly status: 'PENDING' | 'PROCESSING' | 'SIGNED' | 'REJECTED' | 'FAILED' | 'CANCELLED';
+      readonly banjarId: CodecTypes['pg/text@1']['output'] | null;
+      readonly status:
+        | 'PENDING'
+        | 'IN_PROGRESS'
+        | 'READY_TO_SIGN'
+        | 'PROCESSING'
+        | 'SIGNED'
+        | 'REJECTED'
+        | 'FAILED'
+        | 'CANCELLED';
+      readonly currentSequence: CodecTypes['pg/int4@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly completedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly cancelledAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+    };
+    readonly SignRequestApproval: {
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly signRequestId: CodecTypes['pg/uuid@1']['output'];
+      readonly level: 'BANJAR' | 'DESA';
+      readonly role: CodecTypes['pg/text@1']['output'];
+      readonly permission: CodecTypes['pg/text@1']['output'];
+      readonly sequence: CodecTypes['pg/int4@1']['output'];
+      readonly required: CodecTypes['pg/bool@1']['output'];
+      readonly status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
+      readonly signerUserId: CodecTypes['pg/text@1']['output'] | null;
+      readonly letterNumber: CodecTypes['pg/text@1']['output'] | null;
+      readonly letterDate: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly page: CodecTypes['pg/int4@1']['output'];
+      readonly x: CodecTypes['pg/float8@1']['output'];
+      readonly y: CodecTypes['pg/float8@1']['output'];
+      readonly width: CodecTypes['pg/float8@1']['output'];
+      readonly height: CodecTypes['pg/float8@1']['output'];
+      readonly approvedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly rejectedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly rejectionReason: CodecTypes['pg/text@1']['output'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
-      readonly signedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-      readonly rejectedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
     };
   };
 };
@@ -333,16 +392,20 @@ export type FieldInputTypes = {
       readonly actorUserId: CodecTypes['pg/text@1']['input'] | null;
       readonly action:
         | 'SIGN_REQUEST_CREATED'
-        | 'DOCUMENT_CREATED'
-        | 'DOCUMENT_OPENED'
-        | 'PLACEMENT_CREATED'
-        | 'PLACEMENT_UPDATED'
-        | 'SIGN_ATTEMPT'
-        | 'PIN_FAILED'
-        | 'SIGNED'
-        | 'REJECTED'
-        | 'FAILED'
-        | 'CANCELLED';
+        | 'APPROVAL_STARTED'
+        | 'APPROVAL_APPROVED'
+        | 'APPROVAL_REJECTED'
+        | 'PIN_VERIFICATION_SUCCESS'
+        | 'PIN_VERIFICATION_FAILED'
+        | 'SIGNATURE_PROFILE_CREATED'
+        | 'SIGNATURE_PROFILE_UPDATED'
+        | 'DOCUMENT_RECEIVED'
+        | 'DOCUMENT_HASHED'
+        | 'SIGNING_STARTED'
+        | 'SIGNING_COMPLETED'
+        | 'SIGNING_FAILED'
+        | 'SIGN_REQUEST_COMPLETED'
+        | 'SIGN_REQUEST_CANCELLED';
       readonly ipAddress: CodecTypes['pg/text@1']['input'] | null;
       readonly userAgent: CodecTypes['pg/text@1']['input'] | null;
       readonly metadata: CodecTypes['pg/json@1']['input'] | null;
@@ -351,7 +414,7 @@ export type FieldInputTypes = {
     readonly Document: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly signRequestId: CodecTypes['pg/uuid@1']['input'];
-      readonly type: 'ORIGINAL' | 'SIGNED' | 'ATTACHMENT';
+      readonly type: 'FINAL' | 'SIGNED';
       readonly fileKey: CodecTypes['pg/text@1']['input'];
       readonly hash: CodecTypes['pg/text@1']['input'] | null;
       readonly mimeType: CodecTypes['pg/text@1']['input'] | null;
@@ -363,8 +426,10 @@ export type FieldInputTypes = {
     readonly Signature: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
       readonly signRequestId: CodecTypes['pg/uuid@1']['input'];
+      readonly approvalId: CodecTypes['pg/uuid@1']['input'] | null;
       readonly documentId: CodecTypes['pg/uuid@1']['input'];
       readonly signerUserId: CodecTypes['pg/text@1']['input'];
+      readonly level: 'BANJAR' | 'DESA';
       readonly documentHash: CodecTypes['pg/text@1']['input'];
       readonly algorithm: CodecTypes['pg/text@1']['input'];
       readonly signatureValue: CodecTypes['pg/text@1']['input'];
@@ -372,18 +437,11 @@ export type FieldInputTypes = {
       readonly certificateIssuer: CodecTypes['pg/text@1']['input'] | null;
       readonly signedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
-    readonly SignaturePlacement: {
+    readonly SignatureProfile: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
-      readonly signRequestId: CodecTypes['pg/uuid@1']['input'];
-      readonly documentId: CodecTypes['pg/uuid@1']['input'];
-      readonly signerUserId: CodecTypes['pg/text@1']['input'];
-      readonly type: 'SIGNATURE' | 'INITIAL' | 'STAMP' | 'QR_CODE';
-      readonly page: CodecTypes['pg/int4@1']['input'];
-      readonly x: CodecTypes['pg/float8@1']['input'];
-      readonly y: CodecTypes['pg/float8@1']['input'];
-      readonly width: CodecTypes['pg/float8@1']['input'];
-      readonly height: CodecTypes['pg/float8@1']['input'];
-      readonly sequence: CodecTypes['pg/int4@1']['input'];
+      readonly userId: CodecTypes['pg/text@1']['input'];
+      readonly signatureImageKey: CodecTypes['pg/text@1']['input'];
+      readonly active: CodecTypes['pg/bool@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
@@ -394,20 +452,80 @@ export type FieldInputTypes = {
       readonly failedAttempt: CodecTypes['pg/int4@1']['input'];
       readonly lockedUntil: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly active: CodecTypes['pg/bool@1']['input'];
+      readonly lastPinChangedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+    };
+    readonly SigningTemplate: {
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly code: CodecTypes['pg/text@1']['input'];
+      readonly name: CodecTypes['pg/text@1']['input'];
+      readonly description: CodecTypes['pg/text@1']['input'] | null;
+      readonly version: CodecTypes['pg/int4@1']['input'];
+      readonly active: CodecTypes['pg/bool@1']['input'];
+      readonly createdBy: CodecTypes['pg/text@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+    };
+    readonly SigningTemplateStep: {
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly templateId: CodecTypes['pg/uuid@1']['input'];
+      readonly level: 'BANJAR' | 'DESA';
+      readonly role: CodecTypes['pg/text@1']['input'];
+      readonly permission: CodecTypes['pg/text@1']['input'];
+      readonly sequence: CodecTypes['pg/int4@1']['input'];
+      readonly required: CodecTypes['pg/bool@1']['input'];
+      readonly page: CodecTypes['pg/int4@1']['input'];
+      readonly x: CodecTypes['pg/float8@1']['input'];
+      readonly y: CodecTypes['pg/float8@1']['input'];
+      readonly width: CodecTypes['pg/float8@1']['input'];
+      readonly height: CodecTypes['pg/float8@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
     readonly SignRequest: {
       readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly templateId: CodecTypes['pg/uuid@1']['input'];
       readonly referenceId: CodecTypes['pg/text@1']['input'];
-      readonly signerUserId: CodecTypes['pg/text@1']['input'];
       readonly villageId: CodecTypes['pg/text@1']['input'] | null;
-      readonly status: 'PENDING' | 'PROCESSING' | 'SIGNED' | 'REJECTED' | 'FAILED' | 'CANCELLED';
+      readonly banjarId: CodecTypes['pg/text@1']['input'] | null;
+      readonly status:
+        | 'PENDING'
+        | 'IN_PROGRESS'
+        | 'READY_TO_SIGN'
+        | 'PROCESSING'
+        | 'SIGNED'
+        | 'REJECTED'
+        | 'FAILED'
+        | 'CANCELLED';
+      readonly currentSequence: CodecTypes['pg/int4@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly completedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly cancelledAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+    };
+    readonly SignRequestApproval: {
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly signRequestId: CodecTypes['pg/uuid@1']['input'];
+      readonly level: 'BANJAR' | 'DESA';
+      readonly role: CodecTypes['pg/text@1']['input'];
+      readonly permission: CodecTypes['pg/text@1']['input'];
+      readonly sequence: CodecTypes['pg/int4@1']['input'];
+      readonly required: CodecTypes['pg/bool@1']['input'];
+      readonly status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
+      readonly signerUserId: CodecTypes['pg/text@1']['input'] | null;
+      readonly letterNumber: CodecTypes['pg/text@1']['input'] | null;
+      readonly letterDate: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly page: CodecTypes['pg/int4@1']['input'];
+      readonly x: CodecTypes['pg/float8@1']['input'];
+      readonly y: CodecTypes['pg/float8@1']['input'];
+      readonly width: CodecTypes['pg/float8@1']['input'];
+      readonly height: CodecTypes['pg/float8@1']['input'];
+      readonly approvedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly rejectedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly rejectionReason: CodecTypes['pg/text@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
-      readonly signedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
-      readonly rejectedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
     };
   };
 };
@@ -416,16 +534,20 @@ export type StorageColumnTypes = {
     readonly audit_logs: {
       readonly action:
         | 'SIGN_REQUEST_CREATED'
-        | 'DOCUMENT_CREATED'
-        | 'DOCUMENT_OPENED'
-        | 'PLACEMENT_CREATED'
-        | 'PLACEMENT_UPDATED'
-        | 'SIGN_ATTEMPT'
-        | 'PIN_FAILED'
-        | 'SIGNED'
-        | 'REJECTED'
-        | 'FAILED'
-        | 'CANCELLED';
+        | 'APPROVAL_STARTED'
+        | 'APPROVAL_APPROVED'
+        | 'APPROVAL_REJECTED'
+        | 'PIN_VERIFICATION_SUCCESS'
+        | 'PIN_VERIFICATION_FAILED'
+        | 'SIGNATURE_PROFILE_CREATED'
+        | 'SIGNATURE_PROFILE_UPDATED'
+        | 'DOCUMENT_RECEIVED'
+        | 'DOCUMENT_HASHED'
+        | 'SIGNING_STARTED'
+        | 'SIGNING_COMPLETED'
+        | 'SIGNING_FAILED'
+        | 'SIGN_REQUEST_COMPLETED'
+        | 'SIGN_REQUEST_CANCELLED';
       readonly actor_user_id: CodecTypes['pg/text@1']['output'] | null;
       readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
@@ -443,43 +565,70 @@ export type StorageColumnTypes = {
       readonly locked: CodecTypes['pg/bool@1']['output'];
       readonly mime_type: CodecTypes['pg/text@1']['output'] | null;
       readonly sign_request_id: CodecTypes['pg/uuid@1']['output'];
-      readonly type: 'ORIGINAL' | 'SIGNED' | 'ATTACHMENT';
+      readonly type: 'FINAL' | 'SIGNED';
       readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
-    readonly sign_requests: {
+    readonly sign_request_approvals: {
+      readonly approved_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
-      readonly id: CodecTypes['pg/uuid@1']['output'];
-      readonly reference_id: CodecTypes['pg/text@1']['output'];
-      readonly rejected_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-      readonly rejection_reason: CodecTypes['pg/text@1']['output'] | null;
-      readonly signed_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-      readonly signer_user_id: CodecTypes['pg/text@1']['output'];
-      readonly status: 'PENDING' | 'PROCESSING' | 'SIGNED' | 'REJECTED' | 'FAILED' | 'CANCELLED';
-      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
-      readonly village_id: CodecTypes['pg/text@1']['output'] | null;
-    };
-    readonly signature_placements: {
-      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
-      readonly document_id: CodecTypes['pg/uuid@1']['output'];
       readonly height: CodecTypes['pg/float8@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly letter_date: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly letter_number: CodecTypes['pg/text@1']['output'] | null;
+      readonly level: 'BANJAR' | 'DESA';
       readonly page: CodecTypes['pg/int4@1']['output'];
+      readonly permission: CodecTypes['pg/text@1']['output'];
+      readonly rejected_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly rejection_reason: CodecTypes['pg/text@1']['output'] | null;
+      readonly required: CodecTypes['pg/bool@1']['output'];
+      readonly role: CodecTypes['pg/text@1']['output'];
       readonly sequence: CodecTypes['pg/int4@1']['output'];
       readonly sign_request_id: CodecTypes['pg/uuid@1']['output'];
-      readonly signer_user_id: CodecTypes['pg/text@1']['output'];
-      readonly type: 'SIGNATURE' | 'INITIAL' | 'STAMP' | 'QR_CODE';
+      readonly signer_user_id: CodecTypes['pg/text@1']['output'] | null;
+      readonly status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
       readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly width: CodecTypes['pg/float8@1']['output'];
       readonly x: CodecTypes['pg/float8@1']['output'];
       readonly y: CodecTypes['pg/float8@1']['output'];
     };
+    readonly sign_requests: {
+      readonly banjar_id: CodecTypes['pg/text@1']['output'] | null;
+      readonly cancelled_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly completed_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly current_sequence: CodecTypes['pg/int4@1']['output'];
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly reference_id: CodecTypes['pg/text@1']['output'];
+      readonly status:
+        | 'PENDING'
+        | 'IN_PROGRESS'
+        | 'READY_TO_SIGN'
+        | 'PROCESSING'
+        | 'SIGNED'
+        | 'REJECTED'
+        | 'FAILED'
+        | 'CANCELLED';
+      readonly template_id: CodecTypes['pg/uuid@1']['output'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly village_id: CodecTypes['pg/text@1']['output'] | null;
+    };
+    readonly signature_profiles: {
+      readonly active: CodecTypes['pg/bool@1']['output'];
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly signature_image_key: CodecTypes['pg/text@1']['output'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly user_id: CodecTypes['pg/text@1']['output'];
+    };
     readonly signatures: {
       readonly algorithm: CodecTypes['pg/text@1']['output'];
+      readonly approval_id: CodecTypes['pg/uuid@1']['output'] | null;
       readonly certificate_issuer: CodecTypes['pg/text@1']['output'] | null;
       readonly certificate_serial: CodecTypes['pg/text@1']['output'] | null;
       readonly document_hash: CodecTypes['pg/text@1']['output'];
       readonly document_id: CodecTypes['pg/uuid@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly level: 'BANJAR' | 'DESA';
       readonly sign_request_id: CodecTypes['pg/uuid@1']['output'];
       readonly signature_value: CodecTypes['pg/text@1']['output'];
       readonly signed_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
@@ -490,10 +639,38 @@ export type StorageColumnTypes = {
       readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly failed_attempt: CodecTypes['pg/int4@1']['output'];
       readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly last_pin_changed_at: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly locked_until: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly pin_hash: CodecTypes['pg/text@1']['output'];
       readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly user_id: CodecTypes['pg/text@1']['output'];
+    };
+    readonly signing_template_steps: {
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly height: CodecTypes['pg/float8@1']['output'];
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly level: 'BANJAR' | 'DESA';
+      readonly page: CodecTypes['pg/int4@1']['output'];
+      readonly permission: CodecTypes['pg/text@1']['output'];
+      readonly required: CodecTypes['pg/bool@1']['output'];
+      readonly role: CodecTypes['pg/text@1']['output'];
+      readonly sequence: CodecTypes['pg/int4@1']['output'];
+      readonly template_id: CodecTypes['pg/uuid@1']['output'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly width: CodecTypes['pg/float8@1']['output'];
+      readonly x: CodecTypes['pg/float8@1']['output'];
+      readonly y: CodecTypes['pg/float8@1']['output'];
+    };
+    readonly signing_templates: {
+      readonly active: CodecTypes['pg/bool@1']['output'];
+      readonly code: CodecTypes['pg/text@1']['output'];
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly created_by: CodecTypes['pg/text@1']['output'];
+      readonly description: CodecTypes['pg/text@1']['output'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['output'];
+      readonly name: CodecTypes['pg/text@1']['output'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly version: CodecTypes['pg/int4@1']['output'];
     };
   };
 };
@@ -502,16 +679,20 @@ export type StorageColumnInputTypes = {
     readonly audit_logs: {
       readonly action:
         | 'SIGN_REQUEST_CREATED'
-        | 'DOCUMENT_CREATED'
-        | 'DOCUMENT_OPENED'
-        | 'PLACEMENT_CREATED'
-        | 'PLACEMENT_UPDATED'
-        | 'SIGN_ATTEMPT'
-        | 'PIN_FAILED'
-        | 'SIGNED'
-        | 'REJECTED'
-        | 'FAILED'
-        | 'CANCELLED';
+        | 'APPROVAL_STARTED'
+        | 'APPROVAL_APPROVED'
+        | 'APPROVAL_REJECTED'
+        | 'PIN_VERIFICATION_SUCCESS'
+        | 'PIN_VERIFICATION_FAILED'
+        | 'SIGNATURE_PROFILE_CREATED'
+        | 'SIGNATURE_PROFILE_UPDATED'
+        | 'DOCUMENT_RECEIVED'
+        | 'DOCUMENT_HASHED'
+        | 'SIGNING_STARTED'
+        | 'SIGNING_COMPLETED'
+        | 'SIGNING_FAILED'
+        | 'SIGN_REQUEST_COMPLETED'
+        | 'SIGN_REQUEST_CANCELLED';
       readonly actor_user_id: CodecTypes['pg/text@1']['input'] | null;
       readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
@@ -529,43 +710,70 @@ export type StorageColumnInputTypes = {
       readonly locked: CodecTypes['pg/bool@1']['input'];
       readonly mime_type: CodecTypes['pg/text@1']['input'] | null;
       readonly sign_request_id: CodecTypes['pg/uuid@1']['input'];
-      readonly type: 'ORIGINAL' | 'SIGNED' | 'ATTACHMENT';
+      readonly type: 'FINAL' | 'SIGNED';
       readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
-    readonly sign_requests: {
+    readonly sign_request_approvals: {
+      readonly approved_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
-      readonly id: CodecTypes['pg/uuid@1']['input'];
-      readonly reference_id: CodecTypes['pg/text@1']['input'];
-      readonly rejected_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
-      readonly rejection_reason: CodecTypes['pg/text@1']['input'] | null;
-      readonly signed_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
-      readonly signer_user_id: CodecTypes['pg/text@1']['input'];
-      readonly status: 'PENDING' | 'PROCESSING' | 'SIGNED' | 'REJECTED' | 'FAILED' | 'CANCELLED';
-      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
-      readonly village_id: CodecTypes['pg/text@1']['input'] | null;
-    };
-    readonly signature_placements: {
-      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
-      readonly document_id: CodecTypes['pg/uuid@1']['input'];
       readonly height: CodecTypes['pg/float8@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly letter_date: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly letter_number: CodecTypes['pg/text@1']['input'] | null;
+      readonly level: 'BANJAR' | 'DESA';
       readonly page: CodecTypes['pg/int4@1']['input'];
+      readonly permission: CodecTypes['pg/text@1']['input'];
+      readonly rejected_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly rejection_reason: CodecTypes['pg/text@1']['input'] | null;
+      readonly required: CodecTypes['pg/bool@1']['input'];
+      readonly role: CodecTypes['pg/text@1']['input'];
       readonly sequence: CodecTypes['pg/int4@1']['input'];
       readonly sign_request_id: CodecTypes['pg/uuid@1']['input'];
-      readonly signer_user_id: CodecTypes['pg/text@1']['input'];
-      readonly type: 'SIGNATURE' | 'INITIAL' | 'STAMP' | 'QR_CODE';
+      readonly signer_user_id: CodecTypes['pg/text@1']['input'] | null;
+      readonly status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
       readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly width: CodecTypes['pg/float8@1']['input'];
       readonly x: CodecTypes['pg/float8@1']['input'];
       readonly y: CodecTypes['pg/float8@1']['input'];
     };
+    readonly sign_requests: {
+      readonly banjar_id: CodecTypes['pg/text@1']['input'] | null;
+      readonly cancelled_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly completed_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly current_sequence: CodecTypes['pg/int4@1']['input'];
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly reference_id: CodecTypes['pg/text@1']['input'];
+      readonly status:
+        | 'PENDING'
+        | 'IN_PROGRESS'
+        | 'READY_TO_SIGN'
+        | 'PROCESSING'
+        | 'SIGNED'
+        | 'REJECTED'
+        | 'FAILED'
+        | 'CANCELLED';
+      readonly template_id: CodecTypes['pg/uuid@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly village_id: CodecTypes['pg/text@1']['input'] | null;
+    };
+    readonly signature_profiles: {
+      readonly active: CodecTypes['pg/bool@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly signature_image_key: CodecTypes['pg/text@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly user_id: CodecTypes['pg/text@1']['input'];
+    };
     readonly signatures: {
       readonly algorithm: CodecTypes['pg/text@1']['input'];
+      readonly approval_id: CodecTypes['pg/uuid@1']['input'] | null;
       readonly certificate_issuer: CodecTypes['pg/text@1']['input'] | null;
       readonly certificate_serial: CodecTypes['pg/text@1']['input'] | null;
       readonly document_hash: CodecTypes['pg/text@1']['input'];
       readonly document_id: CodecTypes['pg/uuid@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly level: 'BANJAR' | 'DESA';
       readonly sign_request_id: CodecTypes['pg/uuid@1']['input'];
       readonly signature_value: CodecTypes['pg/text@1']['input'];
       readonly signed_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
@@ -576,10 +784,38 @@ export type StorageColumnInputTypes = {
       readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly failed_attempt: CodecTypes['pg/int4@1']['input'];
       readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly last_pin_changed_at: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly locked_until: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly pin_hash: CodecTypes['pg/text@1']['input'];
       readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly user_id: CodecTypes['pg/text@1']['input'];
+    };
+    readonly signing_template_steps: {
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly height: CodecTypes['pg/float8@1']['input'];
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly level: 'BANJAR' | 'DESA';
+      readonly page: CodecTypes['pg/int4@1']['input'];
+      readonly permission: CodecTypes['pg/text@1']['input'];
+      readonly required: CodecTypes['pg/bool@1']['input'];
+      readonly role: CodecTypes['pg/text@1']['input'];
+      readonly sequence: CodecTypes['pg/int4@1']['input'];
+      readonly template_id: CodecTypes['pg/uuid@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly width: CodecTypes['pg/float8@1']['input'];
+      readonly x: CodecTypes['pg/float8@1']['input'];
+      readonly y: CodecTypes['pg/float8@1']['input'];
+    };
+    readonly signing_templates: {
+      readonly active: CodecTypes['pg/bool@1']['input'];
+      readonly code: CodecTypes['pg/text@1']['input'];
+      readonly created_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly created_by: CodecTypes['pg/text@1']['input'];
+      readonly description: CodecTypes['pg/text@1']['input'] | null;
+      readonly id: CodecTypes['pg/uuid@1']['input'];
+      readonly name: CodecTypes['pg/text@1']['input'];
+      readonly updated_at: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly version: CodecTypes['pg/int4@1']['input'];
     };
   };
 };
@@ -766,6 +1002,12 @@ type ContractBase = Omit<
                   readonly unique: false;
                 },
                 {
+                  readonly name: 'documents_hash_idx_d25bc543';
+                  readonly prefix: 'documents_hash_idx';
+                  readonly columns: readonly ['hash'];
+                  readonly unique: false;
+                },
+                {
                   readonly name: 'documents_created_at_idx_225d8c0f';
                   readonly prefix: 'documents_created_at_idx';
                   readonly columns: readonly ['created_at'];
@@ -787,96 +1029,7 @@ type ContractBase = Omit<
                 },
               ];
             };
-            readonly sign_requests: {
-              columns: {
-                readonly id: {
-                  readonly nativeType: 'uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly typeRef: 'Uuid';
-                };
-                readonly reference_id: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                };
-                readonly signer_user_id: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                };
-                readonly village_id: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                };
-                readonly status: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/text@1', 'PENDING'>;
-                  };
-                };
-                readonly rejection_reason: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                };
-                readonly created_at: {
-                  readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
-                };
-                readonly updated_at: {
-                  readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: false;
-                };
-                readonly signed_at: {
-                  readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: true;
-                };
-                readonly rejected_at: {
-                  readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: true;
-                };
-              };
-              primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [{ readonly columns: readonly ['reference_id'] }];
-              indexes: readonly [
-                {
-                  readonly name: 'sign_requests_signer_user_id_idx_cda3000a';
-                  readonly prefix: 'sign_requests_signer_user_id_idx';
-                  readonly columns: readonly ['signer_user_id'];
-                  readonly unique: false;
-                },
-                {
-                  readonly name: 'sign_requests_status_idx_e98638ab';
-                  readonly prefix: 'sign_requests_status_idx';
-                  readonly columns: readonly ['status'];
-                  readonly unique: false;
-                },
-                {
-                  readonly name: 'sign_requests_village_id_idx_baafdf98';
-                  readonly prefix: 'sign_requests_village_id_idx';
-                  readonly columns: readonly ['village_id'];
-                  readonly unique: false;
-                },
-                {
-                  readonly name: 'sign_requests_created_at_idx_225d8c0f';
-                  readonly prefix: 'sign_requests_created_at_idx';
-                  readonly columns: readonly ['created_at'];
-                  readonly unique: false;
-                },
-              ];
-              foreignKeys: readonly [];
-            };
-            readonly signature_placements: {
+            readonly sign_request_approvals: {
               columns: {
                 readonly id: {
                   readonly nativeType: 'uuid';
@@ -890,30 +1043,67 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly typeRef: 'Uuid';
                 };
-                readonly document_id: {
-                  readonly nativeType: 'uuid';
-                  readonly codecId: 'pg/uuid@1';
-                  readonly nullable: false;
-                  readonly typeRef: 'Uuid';
-                };
-                readonly signer_user_id: {
+                readonly level: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
                 };
-                readonly type: {
+                readonly role: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly permission: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly sequence: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                };
+                readonly required: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly status: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
                   readonly default: {
                     readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/text@1', 'SIGNATURE'>;
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'PENDING'>;
                   };
+                };
+                readonly signer_user_id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly letter_number: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly letter_date: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
                 };
                 readonly page: {
                   readonly nativeType: 'int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 1>;
+                  };
                 };
                 readonly x: {
                   readonly nativeType: 'float8';
@@ -935,7 +1125,121 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/float8@1';
                   readonly nullable: false;
                 };
-                readonly sequence: {
+                readonly approved_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
+                };
+                readonly rejected_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
+                };
+                readonly rejection_reason: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                };
+                readonly updated_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['sign_request_id', 'sequence'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'sign_request_approvals_sign_request_id_idx_caa2feef';
+                  readonly prefix: 'sign_request_approvals_sign_request_id_idx';
+                  readonly columns: readonly ['sign_request_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_request_approvals_level_idx_30977cf3';
+                  readonly prefix: 'sign_request_approvals_level_idx';
+                  readonly columns: readonly ['level'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_request_approvals_role_idx_2c1ddf83';
+                  readonly prefix: 'sign_request_approvals_role_idx';
+                  readonly columns: readonly ['role'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_request_approvals_status_idx_e98638ab';
+                  readonly prefix: 'sign_request_approvals_status_idx';
+                  readonly columns: readonly ['status'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_request_approvals_signer_user_id_idx_cda3000a';
+                  readonly prefix: 'sign_request_approvals_signer_user_id_idx';
+                  readonly columns: readonly ['signer_user_id'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'sign_request_approvals';
+                    readonly columns: readonly ['sign_request_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'sign_requests';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly sign_requests: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly typeRef: 'Uuid';
+                };
+                readonly template_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly typeRef: 'Uuid';
+                };
+                readonly reference_id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly village_id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly banjar_id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly status: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'PENDING'>;
+                  };
+                };
+                readonly current_sequence: {
                   readonly nativeType: 'int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: false;
@@ -955,28 +1259,54 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: false;
                 };
+                readonly completed_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
+                };
+                readonly cancelled_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
+                };
               };
               primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [
-                { readonly columns: readonly ['document_id', 'signer_user_id', 'sequence'] },
-              ];
+              uniques: readonly [{ readonly columns: readonly ['reference_id'] }];
               indexes: readonly [
                 {
-                  readonly name: 'signature_placements_sign_request_id_idx_caa2feef';
-                  readonly prefix: 'signature_placements_sign_request_id_idx';
-                  readonly columns: readonly ['sign_request_id'];
+                  readonly name: 'sign_requests_template_id_idx_dc536619';
+                  readonly prefix: 'sign_requests_template_id_idx';
+                  readonly columns: readonly ['template_id'];
                   readonly unique: false;
                 },
                 {
-                  readonly name: 'signature_placements_document_id_idx_d3d0944e';
-                  readonly prefix: 'signature_placements_document_id_idx';
-                  readonly columns: readonly ['document_id'];
+                  readonly name: 'sign_requests_status_idx_e98638ab';
+                  readonly prefix: 'sign_requests_status_idx';
+                  readonly columns: readonly ['status'];
                   readonly unique: false;
                 },
                 {
-                  readonly name: 'signature_placements_signer_user_id_idx_cda3000a';
-                  readonly prefix: 'signature_placements_signer_user_id_idx';
-                  readonly columns: readonly ['signer_user_id'];
+                  readonly name: 'sign_requests_village_id_idx_baafdf98';
+                  readonly prefix: 'sign_requests_village_id_idx';
+                  readonly columns: readonly ['village_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_requests_banjar_id_idx_a22e78bc';
+                  readonly prefix: 'sign_requests_banjar_id_idx';
+                  readonly columns: readonly ['banjar_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_requests_current_sequence_idx_4c3b5cb4';
+                  readonly prefix: 'sign_requests_current_sequence_idx';
+                  readonly columns: readonly ['current_sequence'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'sign_requests_created_at_idx_225d8c0f';
+                  readonly prefix: 'sign_requests_created_at_idx';
+                  readonly columns: readonly ['created_at'];
                   readonly unique: false;
                 },
               ];
@@ -984,28 +1314,67 @@ type ContractBase = Omit<
                 {
                   readonly source: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'signature_placements';
-                    readonly columns: readonly ['sign_request_id'];
-                  };
-                  readonly target: {
-                    readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'sign_requests';
-                    readonly columns: readonly ['id'];
-                  };
-                },
-                {
-                  readonly source: {
-                    readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'signature_placements';
-                    readonly columns: readonly ['document_id'];
+                    readonly columns: readonly ['template_id'];
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
-                    readonly tableName: 'documents';
+                    readonly tableName: 'signing_templates';
                     readonly columns: readonly ['id'];
                   };
                 },
               ];
+            };
+            readonly signature_profiles: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly typeRef: 'Uuid';
+                };
+                readonly user_id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly signature_image_key: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly active: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                };
+                readonly updated_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['user_id'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'signature_profiles_active_idx_8af4daed';
+                  readonly prefix: 'signature_profiles_active_idx';
+                  readonly columns: readonly ['active'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [];
             };
             readonly signatures: {
               columns: {
@@ -1021,6 +1390,12 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly typeRef: 'Uuid';
                 };
+                readonly approval_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: true;
+                  readonly typeRef: 'Uuid';
+                };
                 readonly document_id: {
                   readonly nativeType: 'uuid';
                   readonly codecId: 'pg/uuid@1';
@@ -1028,6 +1403,11 @@ type ContractBase = Omit<
                   readonly typeRef: 'Uuid';
                 };
                 readonly signer_user_id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly level: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
@@ -1074,6 +1454,12 @@ type ContractBase = Omit<
                   readonly unique: false;
                 },
                 {
+                  readonly name: 'signatures_approval_id_idx_6a894154';
+                  readonly prefix: 'signatures_approval_id_idx';
+                  readonly columns: readonly ['approval_id'];
+                  readonly unique: false;
+                },
+                {
                   readonly name: 'signatures_document_id_idx_d3d0944e';
                   readonly prefix: 'signatures_document_id_idx';
                   readonly columns: readonly ['document_id'];
@@ -1083,6 +1469,18 @@ type ContractBase = Omit<
                   readonly name: 'signatures_signer_user_id_idx_cda3000a';
                   readonly prefix: 'signatures_signer_user_id_idx';
                   readonly columns: readonly ['signer_user_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'signatures_level_idx_30977cf3';
+                  readonly prefix: 'signatures_level_idx';
+                  readonly columns: readonly ['level'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'signatures_document_hash_idx_4efcc750';
+                  readonly prefix: 'signatures_document_hash_idx';
+                  readonly columns: readonly ['document_hash'];
                   readonly unique: false;
                 },
                 {
@@ -1102,6 +1500,18 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'sign_requests';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'signatures';
+                    readonly columns: readonly ['approval_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'sign_request_approvals';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -1160,6 +1570,11 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/bool@1', true>;
                   };
                 };
+                readonly last_pin_changed_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
+                };
                 readonly created_at: {
                   readonly nativeType: 'timestamptz';
                   readonly codecId: 'pg/timestamptz-temporal@1';
@@ -1184,36 +1599,249 @@ type ContractBase = Omit<
               ];
               foreignKeys: readonly [];
             };
+            readonly signing_template_steps: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly typeRef: 'Uuid';
+                };
+                readonly template_id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly typeRef: 'Uuid';
+                };
+                readonly level: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly role: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly permission: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly sequence: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                };
+                readonly required: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly page: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 1>;
+                  };
+                };
+                readonly x: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: false;
+                };
+                readonly y: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: false;
+                };
+                readonly width: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: false;
+                };
+                readonly height: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: false;
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                };
+                readonly updated_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['template_id', 'sequence'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'signing_template_steps_template_id_idx_dc536619';
+                  readonly prefix: 'signing_template_steps_template_id_idx';
+                  readonly columns: readonly ['template_id'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'signing_template_steps_level_idx_30977cf3';
+                  readonly prefix: 'signing_template_steps_level_idx';
+                  readonly columns: readonly ['level'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'signing_template_steps_role_idx_2c1ddf83';
+                  readonly prefix: 'signing_template_steps_role_idx';
+                  readonly columns: readonly ['role'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'signing_template_steps';
+                    readonly columns: readonly ['template_id'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'signing_templates';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly signing_templates: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'uuid';
+                  readonly codecId: 'pg/uuid@1';
+                  readonly nullable: false;
+                  readonly typeRef: 'Uuid';
+                };
+                readonly code: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly name: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly description: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly version: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 1>;
+                  };
+                };
+                readonly active: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly created_by: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly created_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                };
+                readonly updated_at: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['code', 'version'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'signing_templates_code_idx_8e43b86b';
+                  readonly prefix: 'signing_templates_code_idx';
+                  readonly columns: readonly ['code'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'signing_templates_active_idx_8af4daed';
+                  readonly prefix: 'signing_templates_active_idx';
+                  readonly columns: readonly ['active'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'signing_templates_created_by_idx_e13bb8bf';
+                  readonly prefix: 'signing_templates_created_by_idx';
+                  readonly columns: readonly ['created_by'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [];
+            };
           };
           readonly valueSet: {
+            readonly ApprovalLevel: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['BANJAR', 'DESA'];
+            };
+            readonly ApprovalStatus: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['PENDING', 'APPROVED', 'REJECTED', 'SKIPPED'];
+            };
             readonly AuditAction: {
               readonly kind: 'valueSet';
               readonly values: readonly [
                 'SIGN_REQUEST_CREATED',
-                'DOCUMENT_CREATED',
-                'DOCUMENT_OPENED',
-                'PLACEMENT_CREATED',
-                'PLACEMENT_UPDATED',
-                'SIGN_ATTEMPT',
-                'PIN_FAILED',
-                'SIGNED',
-                'REJECTED',
-                'FAILED',
-                'CANCELLED',
+                'APPROVAL_STARTED',
+                'APPROVAL_APPROVED',
+                'APPROVAL_REJECTED',
+                'PIN_VERIFICATION_SUCCESS',
+                'PIN_VERIFICATION_FAILED',
+                'SIGNATURE_PROFILE_CREATED',
+                'SIGNATURE_PROFILE_UPDATED',
+                'DOCUMENT_RECEIVED',
+                'DOCUMENT_HASHED',
+                'SIGNING_STARTED',
+                'SIGNING_COMPLETED',
+                'SIGNING_FAILED',
+                'SIGN_REQUEST_COMPLETED',
+                'SIGN_REQUEST_CANCELLED',
               ];
             };
             readonly DocumentType: {
               readonly kind: 'valueSet';
-              readonly values: readonly ['ORIGINAL', 'SIGNED', 'ATTACHMENT'];
-            };
-            readonly PlacementType: {
-              readonly kind: 'valueSet';
-              readonly values: readonly ['SIGNATURE', 'INITIAL', 'STAMP', 'QR_CODE'];
+              readonly values: readonly ['FINAL', 'SIGNED'];
             };
             readonly SignRequestStatus: {
               readonly kind: 'valueSet';
               readonly values: readonly [
                 'PENDING',
+                'IN_PROGRESS',
+                'READY_TO_SIGN',
                 'PROCESSING',
                 'SIGNED',
                 'REJECTED',
@@ -1240,22 +1868,34 @@ type ContractBase = Omit<
   readonly target: 'postgres';
   readonly targetFamily: 'sql';
   readonly roots: {
+    readonly signing_templates: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'SigningTemplate';
+    };
+    readonly signing_template_steps: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'SigningTemplateStep';
+    };
     readonly sign_requests: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'SignRequest';
     };
-    readonly documents: { readonly namespace: 'public' & NamespaceId; readonly model: 'Document' };
-    readonly signature_placements: {
+    readonly sign_request_approvals: {
       readonly namespace: 'public' & NamespaceId;
-      readonly model: 'SignaturePlacement';
-    };
-    readonly signatures: {
-      readonly namespace: 'public' & NamespaceId;
-      readonly model: 'Signature';
+      readonly model: 'SignRequestApproval';
     };
     readonly signer_credentials: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'SignerCredential';
+    };
+    readonly signature_profiles: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'SignatureProfile';
+    };
+    readonly documents: { readonly namespace: 'public' & NamespaceId; readonly model: 'Document' };
+    readonly signatures: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'Signature';
     };
     readonly audit_logs: { readonly namespace: 'public' & NamespaceId; readonly model: 'AuditLog' };
   };
@@ -1379,17 +2019,6 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
-              readonly placements: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'SignaturePlacement';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['documentId'];
-                };
-              };
               readonly signRequest: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -1440,11 +2069,19 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
+              readonly approvalId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
               readonly documentId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
               readonly signerUserId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly level: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
@@ -1477,6 +2114,17 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
+              readonly approval: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SignRequestApproval';
+                };
+                readonly cardinality: 'N:1';
+                readonly on: {
+                  readonly localFields: readonly ['approvalId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
               readonly document: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -1506,8 +2154,10 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly id: { readonly column: 'id' };
                 readonly signRequestId: { readonly column: 'sign_request_id' };
+                readonly approvalId: { readonly column: 'approval_id' };
                 readonly documentId: { readonly column: 'document_id' };
                 readonly signerUserId: { readonly column: 'signer_user_id' };
+                readonly level: { readonly column: 'level' };
                 readonly documentHash: { readonly column: 'document_hash' };
                 readonly algorithm: { readonly column: 'algorithm' };
                 readonly signatureValue: { readonly column: 'signature_value' };
@@ -1517,51 +2167,23 @@ type ContractBase = Omit<
               };
             };
           };
-          readonly SignaturePlacement: {
+          readonly SignatureProfile: {
             readonly fields: {
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
-              readonly signRequestId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly documentId: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
-              };
-              readonly signerUserId: {
+              readonly userId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly type: {
+              readonly signatureImageKey: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly page: {
+              readonly active: {
                 readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly x: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
-              };
-              readonly y: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
-              };
-              readonly width: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
-              };
-              readonly height: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
-              };
-              readonly sequence: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
               readonly createdAt: {
                 readonly nullable: false;
@@ -1578,45 +2200,15 @@ type ContractBase = Omit<
                 };
               };
             };
-            readonly relations: {
-              readonly document: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'Document';
-                };
-                readonly cardinality: 'N:1';
-                readonly on: {
-                  readonly localFields: readonly ['documentId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-              readonly signRequest: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'SignRequest';
-                };
-                readonly cardinality: 'N:1';
-                readonly on: {
-                  readonly localFields: readonly ['signRequestId'];
-                  readonly targetFields: readonly ['id'];
-                };
-              };
-            };
+            readonly relations: Record<string, never>;
             readonly storage: {
-              readonly table: 'signature_placements';
+              readonly table: 'signature_profiles';
               readonly namespaceId: 'public';
               readonly fields: {
                 readonly id: { readonly column: 'id' };
-                readonly signRequestId: { readonly column: 'sign_request_id' };
-                readonly documentId: { readonly column: 'document_id' };
-                readonly signerUserId: { readonly column: 'signer_user_id' };
-                readonly type: { readonly column: 'type' };
-                readonly page: { readonly column: 'page' };
-                readonly x: { readonly column: 'x' };
-                readonly y: { readonly column: 'y' };
-                readonly width: { readonly column: 'width' };
-                readonly height: { readonly column: 'height' };
-                readonly sequence: { readonly column: 'sequence' };
+                readonly userId: { readonly column: 'user_id' };
+                readonly signatureImageKey: { readonly column: 'signature_image_key' };
+                readonly active: { readonly column: 'active' };
                 readonly createdAt: { readonly column: 'created_at' };
                 readonly updatedAt: { readonly column: 'updated_at' };
               };
@@ -1651,6 +2243,13 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
+              readonly lastPinChangedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
               readonly createdAt: {
                 readonly nullable: false;
                 readonly type: {
@@ -1677,35 +2276,40 @@ type ContractBase = Omit<
                 readonly failedAttempt: { readonly column: 'failed_attempt' };
                 readonly lockedUntil: { readonly column: 'locked_until' };
                 readonly active: { readonly column: 'active' };
+                readonly lastPinChangedAt: { readonly column: 'last_pin_changed_at' };
                 readonly createdAt: { readonly column: 'created_at' };
                 readonly updatedAt: { readonly column: 'updated_at' };
               };
             };
           };
-          readonly SignRequest: {
+          readonly SigningTemplate: {
             readonly fields: {
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
               };
-              readonly referenceId: {
+              readonly code: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly signerUserId: {
+              readonly name: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly villageId: {
+              readonly description: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
-              readonly status: {
+              readonly version: {
                 readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
-              readonly rejectionReason: {
-                readonly nullable: true;
+              readonly active: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly createdBy: {
+                readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly createdAt: {
@@ -1722,14 +2326,198 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
-              readonly signedAt: {
+            };
+            readonly relations: {
+              readonly signRequests: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SignRequest';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['templateId'];
+                };
+              };
+              readonly steps: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SigningTemplateStep';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['templateId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'signing_templates';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly code: { readonly column: 'code' };
+                readonly name: { readonly column: 'name' };
+                readonly description: { readonly column: 'description' };
+                readonly version: { readonly column: 'version' };
+                readonly active: { readonly column: 'active' };
+                readonly createdBy: { readonly column: 'created_by' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly SigningTemplateStep: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly templateId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly level: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly role: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly permission: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly sequence: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly required: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly page: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly x: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly y: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly width: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly height: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+            };
+            readonly relations: {
+              readonly template: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SigningTemplate';
+                };
+                readonly cardinality: 'N:1';
+                readonly on: {
+                  readonly localFields: readonly ['templateId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'signing_template_steps';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly templateId: { readonly column: 'template_id' };
+                readonly level: { readonly column: 'level' };
+                readonly role: { readonly column: 'role' };
+                readonly permission: { readonly column: 'permission' };
+                readonly sequence: { readonly column: 'sequence' };
+                readonly required: { readonly column: 'required' };
+                readonly page: { readonly column: 'page' };
+                readonly x: { readonly column: 'x' };
+                readonly y: { readonly column: 'y' };
+                readonly width: { readonly column: 'width' };
+                readonly height: { readonly column: 'height' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+              };
+            };
+          };
+          readonly SignRequest: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly templateId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly referenceId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly villageId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly banjarId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly currentSequence: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly completedAt: {
                 readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
                   readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
-              readonly rejectedAt: {
+              readonly cancelledAt: {
                 readonly nullable: true;
                 readonly type: {
                   readonly kind: 'scalar';
@@ -1738,6 +2526,17 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
+              readonly approvals: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SignRequestApproval';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['signRequestId'];
+                };
+              };
               readonly auditLogs: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -1760,17 +2559,6 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['signRequestId'];
                 };
               };
-              readonly placements: {
-                readonly to: {
-                  readonly namespace: 'public' & NamespaceId;
-                  readonly model: 'SignaturePlacement';
-                };
-                readonly cardinality: '1:N';
-                readonly on: {
-                  readonly localFields: readonly ['id'];
-                  readonly targetFields: readonly ['signRequestId'];
-                };
-              };
               readonly signatures: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -1782,21 +2570,187 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['signRequestId'];
                 };
               };
+              readonly template: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SigningTemplate';
+                };
+                readonly cardinality: 'N:1';
+                readonly on: {
+                  readonly localFields: readonly ['templateId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
             };
             readonly storage: {
               readonly table: 'sign_requests';
               readonly namespaceId: 'public';
               readonly fields: {
                 readonly id: { readonly column: 'id' };
+                readonly templateId: { readonly column: 'template_id' };
                 readonly referenceId: { readonly column: 'reference_id' };
-                readonly signerUserId: { readonly column: 'signer_user_id' };
                 readonly villageId: { readonly column: 'village_id' };
+                readonly banjarId: { readonly column: 'banjar_id' };
                 readonly status: { readonly column: 'status' };
+                readonly currentSequence: { readonly column: 'current_sequence' };
+                readonly createdAt: { readonly column: 'created_at' };
+                readonly updatedAt: { readonly column: 'updated_at' };
+                readonly completedAt: { readonly column: 'completed_at' };
+                readonly cancelledAt: { readonly column: 'cancelled_at' };
+              };
+            };
+          };
+          readonly SignRequestApproval: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly signRequestId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
+              };
+              readonly level: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly role: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly permission: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly sequence: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly required: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly signerUserId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly letterNumber: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly letterDate: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly page: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly x: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly y: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly width: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly height: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly approvedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly rejectedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly rejectionReason: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+            };
+            readonly relations: {
+              readonly signRequest: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'SignRequest';
+                };
+                readonly cardinality: 'N:1';
+                readonly on: {
+                  readonly localFields: readonly ['signRequestId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly signatures: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Signature';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['approvalId'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'sign_request_approvals';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly signRequestId: { readonly column: 'sign_request_id' };
+                readonly level: { readonly column: 'level' };
+                readonly role: { readonly column: 'role' };
+                readonly permission: { readonly column: 'permission' };
+                readonly sequence: { readonly column: 'sequence' };
+                readonly required: { readonly column: 'required' };
+                readonly status: { readonly column: 'status' };
+                readonly signerUserId: { readonly column: 'signer_user_id' };
+                readonly letterNumber: { readonly column: 'letter_number' };
+                readonly letterDate: { readonly column: 'letter_date' };
+                readonly page: { readonly column: 'page' };
+                readonly x: { readonly column: 'x' };
+                readonly y: { readonly column: 'y' };
+                readonly width: { readonly column: 'width' };
+                readonly height: { readonly column: 'height' };
+                readonly approvedAt: { readonly column: 'approved_at' };
+                readonly rejectedAt: { readonly column: 'rejected_at' };
                 readonly rejectionReason: { readonly column: 'rejection_reason' };
                 readonly createdAt: { readonly column: 'created_at' };
                 readonly updatedAt: { readonly column: 'updated_at' };
-                readonly signedAt: { readonly column: 'signed_at' };
-                readonly rejectedAt: { readonly column: 'rejected_at' };
               };
             };
           };
@@ -1806,6 +2760,8 @@ type ContractBase = Omit<
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
               { readonly name: 'PENDING'; readonly value: 'PENDING' },
+              { readonly name: 'IN_PROGRESS'; readonly value: 'IN_PROGRESS' },
+              { readonly name: 'READY_TO_SIGN'; readonly value: 'READY_TO_SIGN' },
               { readonly name: 'PROCESSING'; readonly value: 'PROCESSING' },
               { readonly name: 'SIGNED'; readonly value: 'SIGNED' },
               { readonly name: 'REJECTED'; readonly value: 'REJECTED' },
@@ -1813,37 +2769,59 @@ type ContractBase = Omit<
               { readonly name: 'CANCELLED'; readonly value: 'CANCELLED' },
             ];
           };
+          readonly ApprovalStatus: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'PENDING'; readonly value: 'PENDING' },
+              { readonly name: 'APPROVED'; readonly value: 'APPROVED' },
+              { readonly name: 'REJECTED'; readonly value: 'REJECTED' },
+              { readonly name: 'SKIPPED'; readonly value: 'SKIPPED' },
+            ];
+          };
+          readonly ApprovalLevel: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'BANJAR'; readonly value: 'BANJAR' },
+              { readonly name: 'DESA'; readonly value: 'DESA' },
+            ];
+          };
           readonly DocumentType: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
-              { readonly name: 'ORIGINAL'; readonly value: 'ORIGINAL' },
+              { readonly name: 'FINAL'; readonly value: 'FINAL' },
               { readonly name: 'SIGNED'; readonly value: 'SIGNED' },
-              { readonly name: 'ATTACHMENT'; readonly value: 'ATTACHMENT' },
-            ];
-          };
-          readonly PlacementType: {
-            readonly codecId: 'pg/text@1';
-            readonly members: readonly [
-              { readonly name: 'SIGNATURE'; readonly value: 'SIGNATURE' },
-              { readonly name: 'INITIAL'; readonly value: 'INITIAL' },
-              { readonly name: 'STAMP'; readonly value: 'STAMP' },
-              { readonly name: 'QR_CODE'; readonly value: 'QR_CODE' },
             ];
           };
           readonly AuditAction: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
               { readonly name: 'SIGN_REQUEST_CREATED'; readonly value: 'SIGN_REQUEST_CREATED' },
-              { readonly name: 'DOCUMENT_CREATED'; readonly value: 'DOCUMENT_CREATED' },
-              { readonly name: 'DOCUMENT_OPENED'; readonly value: 'DOCUMENT_OPENED' },
-              { readonly name: 'PLACEMENT_CREATED'; readonly value: 'PLACEMENT_CREATED' },
-              { readonly name: 'PLACEMENT_UPDATED'; readonly value: 'PLACEMENT_UPDATED' },
-              { readonly name: 'SIGN_ATTEMPT'; readonly value: 'SIGN_ATTEMPT' },
-              { readonly name: 'PIN_FAILED'; readonly value: 'PIN_FAILED' },
-              { readonly name: 'SIGNED'; readonly value: 'SIGNED' },
-              { readonly name: 'REJECTED'; readonly value: 'REJECTED' },
-              { readonly name: 'FAILED'; readonly value: 'FAILED' },
-              { readonly name: 'CANCELLED'; readonly value: 'CANCELLED' },
+              { readonly name: 'APPROVAL_STARTED'; readonly value: 'APPROVAL_STARTED' },
+              { readonly name: 'APPROVAL_APPROVED'; readonly value: 'APPROVAL_APPROVED' },
+              { readonly name: 'APPROVAL_REJECTED'; readonly value: 'APPROVAL_REJECTED' },
+              {
+                readonly name: 'PIN_VERIFICATION_SUCCESS';
+                readonly value: 'PIN_VERIFICATION_SUCCESS';
+              },
+              {
+                readonly name: 'PIN_VERIFICATION_FAILED';
+                readonly value: 'PIN_VERIFICATION_FAILED';
+              },
+              {
+                readonly name: 'SIGNATURE_PROFILE_CREATED';
+                readonly value: 'SIGNATURE_PROFILE_CREATED';
+              },
+              {
+                readonly name: 'SIGNATURE_PROFILE_UPDATED';
+                readonly value: 'SIGNATURE_PROFILE_UPDATED';
+              },
+              { readonly name: 'DOCUMENT_RECEIVED'; readonly value: 'DOCUMENT_RECEIVED' },
+              { readonly name: 'DOCUMENT_HASHED'; readonly value: 'DOCUMENT_HASHED' },
+              { readonly name: 'SIGNING_STARTED'; readonly value: 'SIGNING_STARTED' },
+              { readonly name: 'SIGNING_COMPLETED'; readonly value: 'SIGNING_COMPLETED' },
+              { readonly name: 'SIGNING_FAILED'; readonly value: 'SIGNING_FAILED' },
+              { readonly name: 'SIGN_REQUEST_COMPLETED'; readonly value: 'SIGN_REQUEST_COMPLETED' },
+              { readonly name: 'SIGN_REQUEST_CANCELLED'; readonly value: 'SIGN_REQUEST_CANCELLED' },
             ];
           };
         };
@@ -1901,6 +2879,23 @@ type ContractBase = Omit<
         {
           readonly ref: {
             readonly namespace: 'public';
+            readonly table: 'sign_request_approvals';
+            readonly column: 'id';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
+            readonly table: 'sign_request_approvals';
+            readonly column: 'updated_at';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'instantNow' };
+          readonly onUpdate: { readonly kind: 'generator'; readonly id: 'instantNow' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
             readonly table: 'sign_requests';
             readonly column: 'id';
           };
@@ -1918,7 +2913,7 @@ type ContractBase = Omit<
         {
           readonly ref: {
             readonly namespace: 'public';
-            readonly table: 'signature_placements';
+            readonly table: 'signature_profiles';
             readonly column: 'id';
           };
           readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
@@ -1926,7 +2921,7 @@ type ContractBase = Omit<
         {
           readonly ref: {
             readonly namespace: 'public';
-            readonly table: 'signature_placements';
+            readonly table: 'signature_profiles';
             readonly column: 'updated_at';
           };
           readonly onCreate: { readonly kind: 'generator'; readonly id: 'instantNow' };
@@ -1952,6 +2947,40 @@ type ContractBase = Omit<
           readonly ref: {
             readonly namespace: 'public';
             readonly table: 'signer_credentials';
+            readonly column: 'updated_at';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'instantNow' };
+          readonly onUpdate: { readonly kind: 'generator'; readonly id: 'instantNow' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
+            readonly table: 'signing_template_steps';
+            readonly column: 'id';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
+            readonly table: 'signing_template_steps';
+            readonly column: 'updated_at';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'instantNow' };
+          readonly onUpdate: { readonly kind: 'generator'; readonly id: 'instantNow' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
+            readonly table: 'signing_templates';
+            readonly column: 'id';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
+            readonly table: 'signing_templates';
             readonly column: 'updated_at';
           };
           readonly onCreate: { readonly kind: 'generator'; readonly id: 'instantNow' };
