@@ -1,0 +1,16 @@
+{
+  "prisma.enableDiagnostics": false,
+  "problems.decorations.enabled": false,
+  "search.exclude": {
+    ".agents": true,
+    ".claude": true,
+    ".cursor": true,
+    ".devin": true
+  },
+  "files.watcherExclude": {
+    "**/.agents/**": true,
+    "**/.claude/**": true,
+    "**/.cursor/**": true,
+    "**/.devin/**": true
+  }
+}

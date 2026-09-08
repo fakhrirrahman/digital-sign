@@ -43,3 +43,9 @@ package-lock.json
 **/*.bun
 node_modules/
 dist/
+
+
+.agents
+.claude
+.cursor
+.devin

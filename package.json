@@ -13,6 +13,7 @@
     "elysia": "latest"
   },
   "devDependencies": {
+    "@prisma/cli": "^8.0.0-rc.13",
     "@prisma/cli-engine": "0.2.3",
     "@types/node": "^26.5.0",
     "bun-types": "latest",

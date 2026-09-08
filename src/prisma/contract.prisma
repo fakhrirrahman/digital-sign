@@ -1,4 +1,12 @@
+// use prisma-next
+
+types {
+  Uuid = Uuid
+}
+
 enum SignRequestStatus {
+  @@type("pg/text@1")
+
   PENDING
   PROCESSING
   SIGNED
@@ -7,28 +15,367 @@ enum SignRequestStatus {
   CANCELLED
 }
 
-enum AuditAction {
-  SIGN_REQUEST_CREATED
-  DOCUMENT_OPENED
-  SIGN_ATTEMPT
+enum DocumentType {
+  @@type("pg/text@1")
+
+  ORIGINAL
   SIGNED
-  REJECTED
-  PIN_FAILED
+  ATTACHMENT
 }
 
-model SignRequest {
-  id String @id @default(uuid())
+enum PlacementType {
+  @@type("pg/text@1")
 
-  referenceId  String @unique
-  signerUserId String
-  villageId    String?
+  SIGNATURE
+  INITIAL
+  STAMP
+  QR_CODE
+}
+
+enum AuditAction {
+  @@type("pg/text@1")
+
+  SIGN_REQUEST_CREATED
+  DOCUMENT_CREATED
+  DOCUMENT_OPENED
+  PLACEMENT_CREATED
+  PLACEMENT_UPDATED
+  SIGN_ATTEMPT
+  PIN_FAILED
+  SIGNED
+  REJECTED
+  FAILED
+  CANCELLED
+}
+
+
+// ============================================================
+// SIGN REQUEST
+// ============================================================
+
+model SignRequest {
+  id Uuid @id @default(uuid())
+
+  // ID dari aplikasi/service utama.
+  // Contoh:
+  // SURAT-2026-000001
+  referenceId String @unique @map("reference_id")
+
+  // User ID berasal dari existing authentication service.
+  // Digital Sign Service tidak perlu punya tabel User sendiri.
+  signerUserId String @map("signer_user_id")
+
+  // Opsional jika aplikasi utama memakai konsep desa/tenant.
+  villageId String? @map("village_id")
 
   status SignRequestStatus @default(PENDING)
 
-  rejectionReason String?
+  rejectionReason String? @map("rejection_reason")
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  signedAt   DateTime?
-  rejectedAt DateTime?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  updatedAt temporal.updatedAt() @map("updated_at")
+
+  signedAt DateTime? @map("signed_at")
+
+  rejectedAt DateTime? @map("rejected_at")
+
+  // RELATIONS
+
+  documents Document[]
+
+  placements SignaturePlacement[]
+
+  signatures Signature[]
+
+  auditLogs AuditLog[]
+
+  @@index([signerUserId])
+  @@index([status])
+  @@index([villageId])
+  @@index([createdAt])
+
+  @@map("sign_requests")
+}
+
+
+// ============================================================
+// DOCUMENT
+// ============================================================
+
+model Document {
+  id Uuid @id @default(uuid())
+
+  signRequestId Uuid @map("sign_request_id")
+
+  type DocumentType
+
+  // Lokasi file di R2 / S3.
+  //
+  // contoh:
+  //
+  // original/2026/09/abc.pdf
+  //
+  // signed/2026/09/abc.pdf
+  //
+  fileKey String @map("file_key")
+
+  // SHA-256 file.
+  hash String?
+
+  mimeType String? @map("mime_type")
+
+  fileSize Int? @map("file_size")
+
+  // Untuk memastikan dokumen final tidak boleh dimodifikasi.
+  locked Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  updatedAt temporal.updatedAt() @map("updated_at")
+
+  // RELATION
+
+  signRequest SignRequest @relation(
+    fields: [signRequestId],
+    references: [id]
+  )
+
+  placements SignaturePlacement[]
+
+  signatures Signature[]
+
+  @@index([signRequestId])
+  @@index([type])
+  @@index([createdAt])
+
+  @@map("documents")
+}
+
+
+// ============================================================
+// SIGNATURE PLACEMENT
+// ============================================================
+//
+// Digunakan frontend React untuk mengatur posisi.
+//
+// Koordinat saya sarankan normalized:
+// x      = 0.0 - 1.0
+// y      = 0.0 - 1.0
+// width  = 0.0 - 1.0
+// height = 0.0 - 1.0
+//
+// Contoh:
+//
+// {
+//   page: 1,
+//   x: 0.68,
+//   y: 0.80,
+//   width: 0.20,
+//   height: 0.08
+// }
+//
+
+model SignaturePlacement {
+  id Uuid @id @default(uuid())
+
+  signRequestId Uuid @map("sign_request_id")
+
+  documentId Uuid @map("document_id")
+
+  signerUserId String @map("signer_user_id")
+
+  type PlacementType @default(SIGNATURE)
+
+  // Page dimulai dari 1.
+  page Int
+
+  x Float
+  y Float
+
+  width Float
+  height Float
+
+  // Untuk menentukan urutan bila ada beberapa placement.
+  sequence Int @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  updatedAt temporal.updatedAt() @map("updated_at")
+
+  // RELATIONS
+
+  signRequest SignRequest @relation(
+    fields: [signRequestId],
+    references: [id]
+  )
+
+  document Document @relation(
+    fields: [documentId],
+    references: [id]
+  )
+
+  @@index([signRequestId])
+  @@index([documentId])
+  @@index([signerUserId])
+
+  // Mencegah sequence yang sama untuk signer yang sama
+  // pada dokumen yang sama.
+  @@unique([
+    documentId,
+    signerUserId,
+    sequence
+  ])
+
+  @@map("signature_placements")
+}
+
+
+// ============================================================
+// SIGNATURE
+// ============================================================
+//
+// Ini berbeda dengan SignaturePlacement.
+//
+// SignaturePlacement:
+// posisi visual.
+//
+// Signature:
+// hasil cryptographic signing.
+//
+
+model Signature {
+  id Uuid @id @default(uuid())
+
+  signRequestId Uuid @map("sign_request_id")
+
+  documentId Uuid @map("document_id")
+
+  signerUserId String @map("signer_user_id")
+
+  // Hash PDF yang benar-benar ditandatangani.
+  documentHash String @map("document_hash")
+
+  // Contoh:
+  // RSA-SHA256
+  // ECDSA-SHA256
+  algorithm String
+
+  // Cryptographic signature.
+  signatureValue String @map("signature_value")
+
+  // Untuk tahap berikutnya kalau memakai
+  // certificate/PSrE.
+  certificateSerial String? @map("certificate_serial")
+
+  certificateIssuer String? @map("certificate_issuer")
+
+  signedAt DateTime @default(now()) @map("signed_at")
+
+  // RELATIONS
+
+  signRequest SignRequest @relation(
+    fields: [signRequestId],
+    references: [id]
+  )
+
+  document Document @relation(
+    fields: [documentId],
+    references: [id]
+  )
+
+  @@index([signRequestId])
+  @@index([documentId])
+  @@index([signerUserId])
+  @@index([signedAt])
+
+  @@map("signatures")
+}
+
+
+// ============================================================
+// SIGNER CREDENTIAL
+// ============================================================
+//
+// Authentication tetap di service kamu yang sudah ada.
+//
+// Tabel ini khusus credential untuk proses digital-sign.
+//
+// Jangan simpan PIN plaintext.
+//
+// Simpan:
+// Bun.password.hash(pin, {
+//   algorithm: "argon2id"
+// })
+//
+
+model SignerCredential {
+  id Uuid @id @default(uuid())
+
+  // ID dari authentication service.
+  userId String @unique @map("user_id")
+
+  pinHash String @map("pin_hash")
+
+  failedAttempt Int @default(0) @map("failed_attempt")
+
+  lockedUntil DateTime? @map("locked_until")
+
+  // Bisa dipakai jika suatu saat PIN perlu di-disable.
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  updatedAt temporal.updatedAt() @map("updated_at")
+
+  @@index([active])
+
+  @@map("signer_credentials")
+}
+
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+//
+// Audit dibuat append-only dari sisi application.
+//
+// Jangan expose endpoint edit/delete audit.
+//
+
+model AuditLog {
+  id Uuid @id @default(uuid())
+
+  signRequestId Uuid? @map("sign_request_id")
+
+  actorUserId String? @map("actor_user_id")
+
+  action AuditAction
+
+  ipAddress String? @map("ip_address")
+
+  userAgent String? @map("user_agent")
+
+  // Bisa menyimpan:
+// {
+//   documentId: "...",
+//   documentHash: "...",
+//   page: 1,
+//   reason: "..."
+// }
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  signRequest SignRequest? @relation(
+    fields: [signRequestId],
+    references: [id]
+  )
+
+  @@index([signRequestId])
+  @@index([actorUserId])
+  @@index([action])
+  @@index([createdAt])
+
+  @@map("audit_logs")
 }
