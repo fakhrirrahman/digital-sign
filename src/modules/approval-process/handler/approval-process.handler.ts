@@ -1,4 +1,5 @@
 import Elysia from "elysia";
+import { authMiddleware } from "../../../commons/middleware/auth.middleware";
 import { successResponse } from "../../../commons/response";
 import { getAuthUserId } from "../../../commons/utils/auth";
 import { ApprovalProcessModel } from "../model/approval-process.model";
@@ -11,6 +12,7 @@ const getRequestIp = (request: Request) =>
 export const approvalProcessHandler = new Elysia({
   prefix: "/approval-process",
 })
+  .use(authMiddleware)
   .get("", async () => {
     const requests = await approvalProcessService.findAll();
 

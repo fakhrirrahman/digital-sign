@@ -1,4 +1,5 @@
 import { db } from "../../../prisma/db";
+import { instantToEpochMilliseconds, toInstant } from "../../../commons/utils/temporal";
 
 export class DashboardRepository {
   async getPendingRequestsCount() {
@@ -22,7 +23,7 @@ export class DashboardRepository {
   }
 
   async getSignedRequestsThisYear() {
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+    const startOfYear = toInstant(new Date(new Date().getFullYear(), 0, 1));
     
     return db.orm.public.SignRequest
       .select("completedAt")
@@ -45,7 +46,7 @@ export class DashboardRepository {
     let count = 0;
     for (const req of signedRequests) {
       if (req.completedAt && req.createdAt) {
-        totalDiffMs += req.completedAt.getTime() - req.createdAt.getTime();
+        totalDiffMs += instantToEpochMilliseconds(req.completedAt) - instantToEpochMilliseconds(req.createdAt);
         count++;
       }
     }

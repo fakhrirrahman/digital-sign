@@ -4,6 +4,7 @@ import { ForbiddenError } from "../../../commons/errors/forbidden.error";
 import { NotFoundError } from "../../../commons/errors/not-found.error";
 import { hasPermission } from "../../../commons/utils/auth";
 import { createDocumentSignature } from "../../../commons/utils/signature";
+import { instantToEpochMilliseconds, toInstant } from "../../../commons/utils/temporal";
 import { approvalProcessRepository } from "../repository/approval-process.repository";
 
 type CreateApprovalProcessInput = {
@@ -109,7 +110,7 @@ export class ApprovalProcessService {
       throw new ForbiddenError("Signer PIN has not been configured");
     }
 
-    if (credential.lockedUntil && new Date(credential.lockedUntil) > new Date()) {
+    if (credential.lockedUntil && instantToEpochMilliseconds(credential.lockedUntil) > Date.now()) {
       throw new ForbiddenError("Signer PIN is temporarily locked");
     }
 
@@ -118,7 +119,7 @@ export class ApprovalProcessService {
     if (!pinIsValid) {
       const failedAttempt = credential.failedAttempt + 1;
       const lockedUntil = failedAttempt >= 5
-        ? new Date(Date.now() + 15 * 60 * 1000)
+        ? toInstant(Date.now() + 15 * 60 * 1000)
         : null;
 
       await approvalProcessRepository.incrementFailedAttempt(

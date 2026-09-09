@@ -1,4 +1,5 @@
 import { db } from "../../../prisma/db";
+import { nowInstant } from "../../../commons/utils/temporal";
 
 export class SignerSetupRepository {
   async findCredentialByUserId(userId: string) {
@@ -14,7 +15,7 @@ export class SignerSetupRepository {
       failedAttempt: 0,
       lockedUntil: null,
       active: true,
-      lastPinChangedAt: new Date(),
+      lastPinChangedAt: nowInstant(),
     });
   }
 
@@ -26,7 +27,7 @@ export class SignerSetupRepository {
         failedAttempt: 0,
         lockedUntil: null,
         active: true,
-        lastPinChangedAt: new Date(),
+        lastPinChangedAt: nowInstant(),
       });
   }
 

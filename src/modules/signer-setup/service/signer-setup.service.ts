@@ -1,6 +1,7 @@
 import { BadRequestError } from "../../../commons/errors/bad-request.error";
 import { signerSetupRepository } from "../repository/signer-setup.repository";
 import { auditRepository } from "../../audit/repository/audit.repository";
+import { instantToEpochMilliseconds } from "../../../commons/utils/temporal";
 
 export class SignerSetupService {
   async setupPin(userId: string, pin: string) {
@@ -53,7 +54,7 @@ export class SignerSetupService {
 
     return {
       hasPin: !!credential,
-      isLocked: credential?.lockedUntil ? new Date(credential.lockedUntil) > new Date() : false,
+      isLocked: credential?.lockedUntil ? instantToEpochMilliseconds(credential.lockedUntil) > Date.now() : false,
       failedAttempts: credential?.failedAttempt ?? 0,
       hasSignatureProfile: !!profile,
       // For mock purposes related to the frontend

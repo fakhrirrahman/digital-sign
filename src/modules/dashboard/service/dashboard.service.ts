@@ -1,4 +1,5 @@
 import { dashboardRepository } from "../repository/dashboard.repository";
+import { instantToEpochMilliseconds } from "../../../commons/utils/temporal";
 
 export class DashboardService {
   async getStats() {
@@ -26,7 +27,7 @@ export class DashboardService {
     // Group by month
     for (const req of signedThisYear) {
       if (req.completedAt) {
-        const monthIndex = req.completedAt.getMonth();
+        const monthIndex = new Date(instantToEpochMilliseconds(req.completedAt)).getMonth();
         monthlyData[monthIndex].Berkas++;
       }
     }

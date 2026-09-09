@@ -1,4 +1,5 @@
 import { db } from "../../../prisma/db";
+import { nowInstant, toInstant, type InstantLike } from "../../../commons/utils/temporal";
 
 export type SignRequestStatus =
   | "PENDING"
@@ -58,7 +59,7 @@ export class ApprovalProcessRepository {
       .first();
   }
 
-  async incrementFailedAttempt(userId: string, failedAttempt: number, lockedUntil: Date | null) {
+  async incrementFailedAttempt(userId: string, failedAttempt: number, lockedUntil: InstantLike | null) {
     return db.orm.public.SignerCredential
       .where({ userId })
       .update({
@@ -181,8 +182,8 @@ export class ApprovalProcessRepository {
           status: "APPROVED",
           signerUserId: userId,
           letterNumber: input.letterNumber ?? null,
-          letterDate: input.letterDate ? new Date(input.letterDate) : null,
-          approvedAt: new Date(),
+          letterDate: input.letterDate ? toInstant(input.letterDate) : null,
+          approvedAt: nowInstant(),
           rejectedAt: null,
           rejectionReason: null,
         });
@@ -354,7 +355,7 @@ export class ApprovalProcessRepository {
         .where({ id: signRequest.id })
         .update({
           status: "SIGNED",
-          completedAt: new Date(),
+          completedAt: nowInstant(),
         });
 
       await tx.orm.public.AuditLog.create({
