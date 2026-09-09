@@ -2,7 +2,9 @@ import { db } from "../../../prisma/db";
 
 export class SignerSetupRepository {
   async findCredentialByUserId(userId: string) {
-    return db.orm.public.SignerCredential.first({ userId });
+    return db.orm.public.SignerCredential
+      .where({ userId })
+      .first();
   }
 
   async createCredential(userId: string, pinHash: string) {
@@ -29,7 +31,9 @@ export class SignerSetupRepository {
   }
 
   async findProfileByUserId(userId: string) {
-    return db.orm.public.SignatureProfile.first({ userId });
+    return db.orm.public.SignatureProfile
+      .where({ userId })
+      .first();
   }
 
   async createProfile(userId: string, signatureImageKey: string) {

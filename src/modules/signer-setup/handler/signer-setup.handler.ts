@@ -7,6 +7,14 @@ import { signerSetupService } from "../service/signer-setup.service";
 export const signerSetupHandler = new Elysia({
   prefix: "/signer-setup",
 })
+  .get(
+    "/status",
+    async (context) => {
+      const userId = getAuthUserId((context as any).auth);
+      const status = await signerSetupService.getStatus(userId);
+      return successResponse(status);
+    }
+  )
   .post(
     "/pin",
     async (context) => {

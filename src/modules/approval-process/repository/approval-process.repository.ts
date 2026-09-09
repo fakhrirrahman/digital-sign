@@ -18,7 +18,9 @@ export class ApprovalProcessRepository {
   }
 
   async findByReferenceId(referenceId: string) {
-    return db.orm.public.SignRequest.first({ referenceId });
+    return db.orm.public.SignRequest
+      .where({ referenceId })
+      .first();
   }
 
   async findActiveTemplate(templateCode: string, templateVersion?: number) {
@@ -51,7 +53,9 @@ export class ApprovalProcessRepository {
   }
 
   async findSignerCredential(userId: string) {
-    return db.orm.public.SignerCredential.first({ userId });
+    return db.orm.public.SignerCredential
+      .where({ userId })
+      .first();
   }
 
   async incrementFailedAttempt(userId: string, failedAttempt: number, lockedUntil: Date | null) {

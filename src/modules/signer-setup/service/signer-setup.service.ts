@@ -46,6 +46,24 @@ export class SignerSetupService {
 
     return profile;
   }
+
+  async getStatus(userId: string) {
+    const credential = await signerSetupRepository.findCredentialByUserId(userId);
+    const profile = await signerSetupRepository.findProfileByUserId(userId);
+
+    return {
+      hasPin: !!credential,
+      isLocked: credential?.lockedUntil ? new Date(credential.lockedUntil) > new Date() : false,
+      failedAttempts: credential?.failedAttempt ?? 0,
+      hasSignatureProfile: !!profile,
+      // For mock purposes related to the frontend
+      certificateId: "BSRE-2023-8874-KDS",
+      keyExpiryDays: 912,
+      lastSessionMinutes: 12,
+      isHsmSynced: true,
+      hsmSyncTime: "0.18s"
+    };
+  }
 }
 
 export const signerSetupService = new SignerSetupService();
