@@ -24,7 +24,7 @@ export const env = {
 
   auth: {
     baseUrl: required('AUTH_BASE_URL'),
-    jwtSecret: required('JWT_SECRET')
+    jwtSecret: required('ACCESS_TOKEN_SECRET')
   },
 
   logger: {
